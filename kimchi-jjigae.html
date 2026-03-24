@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>초간단 김치찌개</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans KR', -apple-system, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ══════════════════════════════
+       LAYOUT
+       ══════════════════════════════ */
+    .wrap {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* ══════════════════════════════
+       HEADER — 콘텐츠 폭에 맞춤
+       ══════════════════════════════ */
+    .header {
+      padding: 56px 48px 0;
+    }
+    .header-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #ccc;
+    }
+    .header h1 {
+      font-size: 2.8rem;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      line-height: 1.2;
+      margin: 8px 0 10px;
+    }
+    .header-desc {
+      font-size: 0.95rem;
+      font-weight: 300;
+      color: #999;
+      margin-bottom: 0;
+    }
+    .meta-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid #eee;
+      border-bottom: 1px solid #eee;
+    }
+    .meta-item {
+      padding: 20px 0;
+      text-align: center;
+    }
+    .meta-item:not(:last-child) {
+      border-right: 1px solid #eee;
+    }
+    .meta-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: block;
+    }
+    .meta-label {
+      font-size: 0.68rem;
+      color: #bbb;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 2px;
+    }
+    @media (max-width: 640px) {
+      .header { padding: 36px 24px 0; }
+      .header h1 { font-size: 2rem; }
+    }
+
+    /* ══════════════════════════════
+       HERO IMAGE — 콘텐츠 폭
+       ══════════════════════════════ */
+    .hero-img {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      display: block;
+      border-radius: 6px;
+      margin: 24px 0;
+    }
+
+    /* ══════════════════════════════
+       SECTION
+       ══════════════════════════════ */
+    .section {
+      padding: 20px 48px 40px;
+    }
+    .section-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #ccc;
+    }
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 2px 0 24px;
+    }
+    @media (max-width: 640px) {
+      .section { padding: 16px 24px 32px; }
+    }
+
+    /* ── 섹션 구분: 넉넉한 여백 ── */
+    .section-gap {
+      height: 56px;
+    }
+    @media (max-width: 640px) {
+      .section-gap { height: 40px; }
+    }
+
+    /* ══════════════════════════════
+       SECTION IMAGE
+       ══════════════════════════════ */
+    .section-img {
+      width: calc(100% - 96px);
+      margin: 0 48px;
+      aspect-ratio: 2 / 1;
+      object-fit: cover;
+      display: block;
+      border-radius: 6px;
+    }
+    @media (max-width: 640px) {
+      .section-img { width: calc(100% - 48px); margin: 0 24px; }
+    }
+
+    /* ══════════════════════════════
+       재료 — 2열 그리드
+       ══════════════════════════════ */
+    .ing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 40px;
+    }
+    @media (max-width: 640px) {
+      .ing-grid { grid-template-columns: 1fr; }
+    }
+    .ing-group {
+      grid-column: 1 / -1;
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #ccc;
+      padding: 20px 0 6px;
+    }
+    .ing-group:first-child { padding-top: 0; }
+    .ing-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 9px 0;
+      border-bottom: 1px solid #f5f5f5;
+      font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
+      transition: opacity 0.15s;
+    }
+    .ing-row.checked { opacity: 0.25; text-decoration: line-through; }
+    .ing-qty {
+      font-size: 0.82rem;
+      color: #999;
+      white-space: nowrap;
+    }
+    .ing-note {
+      font-size: 0.7rem;
+      color: #bbb;
+      font-weight: 300;
+    }
+
+    /* ══════════════════════════════
+       만드는 법
+       ══════════════════════════════ */
+    .step-list {
+      list-style: none;
+      counter-reset: step;
+    }
+    .step-item {
+      counter-increment: step;
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 0 14px;
+      padding: 20px 0;
+      border-bottom: 1px solid #f3f3f3;
+      align-items: start;
+    }
+    .step-item:last-child { border-bottom: none; }
+    .step-num {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: #e0e0e0;
+      line-height: 1.3;
+    }
+    .step-body {
+      font-size: 0.92rem;
+      line-height: 1.75;
+    }
+    .step-body strong { font-weight: 600; }
+    .step-time {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: #bbb;
+      border: 1px solid #e8e8e8;
+      border-radius: 3px;
+      padding: 1px 7px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .step-sub {
+      display: block;
+      font-size: 0.78rem;
+      color: #aaa;
+      font-weight: 300;
+      margin-top: 4px;
+    }
+
+    /* ══════════════════════════════
+       재료 대체 — 박스 카드
+       ══════════════════════════════ */
+    .sub-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 640px) {
+      .sub-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .sub-card {
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 18px 16px;
+      transition: border-color 0.15s;
+    }
+    .sub-card:hover { border-color: #ccc; }
+    .sub-card-from {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #bbb;
+      margin-bottom: 6px;
+    }
+    .sub-card-to {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #333;
+      line-height: 1.4;
+    }
+    .sub-card-note {
+      font-size: 0.75rem;
+      color: #aaa;
+      margin-top: 4px;
+    }
+
+    /* ══════════════════════════════
+       FOOTER
+       ══════════════════════════════ */
+    footer {
+      text-align: center;
+      padding: 28px 20px;
+      font-size: 0.7rem;
+      color: #ccc;
+      border-top: 1px solid #eee;
+    }
+    footer a { color: #bbb; }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ════ HEADER ════ -->
+  <div class="header">
+    <span class="header-label">Recipe</span>
+    <h1>초간단<br>김치찌개</h1>
+    <p class="header-desc">냄비 하나로 끝내는 자취생 김치찌개</p>
+    <img class="hero-img" src="./thumbnails/kimchi-jjigae.jpg" alt="김치찌개">
+    <div class="meta-bar">
+      <div class="meta-item">
+        <span class="meta-value">15분</span>
+        <span class="meta-label">조리시간</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-value">1인분</span>
+        <span class="meta-label">분량</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-value">쉬움</span>
+        <span class="meta-label">난이도</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-gap"></div>
+
+  <!-- ════ 재료 ════ -->
+  <div class="section">
+    <span class="section-label">Ingredients</span>
+    <div class="section-title">재료</div>
+    <div class="ing-grid">
+
+      <span class="ing-group">주재료</span>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>묵은지 (익은 김치)</span>
+        <span class="ing-qty">150g</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>참치캔 <span class="ing-note">돼지고기 100g 대체 가능</span></span>
+        <span class="ing-qty">1캔</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>두부 <span class="ing-note">선택</span></span>
+        <span class="ing-qty">1/4모</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>물</span>
+        <span class="ing-qty">300ml</span>
+      </div>
+
+      <span class="ing-group">양념</span>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>간장</span>
+        <span class="ing-qty">1작은술</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>고추장 <span class="ing-note">김치가 덜 익었을 때만</span></span>
+        <span class="ing-qty">1/2작은술</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>설탕</span>
+        <span class="ing-qty">1/2작은술</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>참기름 <span class="ing-note">마무리용, 선택</span></span>
+        <span class="ing-qty">약간</span>
+      </div>
+
+    </div>
+  </div>
+  <img class="section-img" src="./thumbnails/kimchi-ingredient.jpg" alt="김치찌개 재료">
+
+  <div class="section-gap"></div>
+
+  <!-- ════ 만드는 법 ════ -->
+  <div class="section">
+    <span class="section-label">Directions</span>
+    <div class="section-title">만드는 법</div>
+    <ol class="step-list">
+      <li class="step-item">
+        <span class="step-num">01</span>
+        <div class="step-body">
+          묵은지를 <strong>가위로</strong> 먹기 좋은 크기로 잘라 냄비에 넣는다
+          <span class="step-time">1분</span>
+          <span class="step-sub">가위로 냄비 위에서 바로 자르면 도마가 필요 없다</span>
+        </div>
+      </li>
+      <li class="step-item">
+        <span class="step-num">02</span>
+        <div class="step-body">
+          물 300ml를 붓고 <strong>간장 1작은술, 설탕 1/2작은술</strong>을 넣어 센 불로 끓인다
+          <span class="step-time">1분</span>
+        </div>
+      </li>
+      <li class="step-item">
+        <span class="step-num">03</span>
+        <div class="step-body">
+          끓기 시작하면 참치캔 기름을 따라 버리고 <strong>참치를 넣는다</strong>
+          <span class="step-time">2분</span>
+          <span class="step-sub">돼지고기 사용 시 이 단계에서 함께 넣고 익힌다</span>
+        </div>
+      </li>
+      <li class="step-item">
+        <span class="step-num">04</span>
+        <div class="step-body">
+          두부를 <strong>숟가락으로 큼직하게 떠서</strong> 넣는다
+          <span class="step-time">1분</span>
+        </div>
+      </li>
+      <li class="step-item">
+        <span class="step-num">05</span>
+        <div class="step-body">
+          <strong>중불</strong>로 줄이고 5~7분간 보글보글 끓인다
+          <span class="step-time">5-7분</span>
+        </div>
+      </li>
+      <li class="step-item">
+        <span class="step-num">06</span>
+        <div class="step-body">
+          불을 끄고 <strong>참기름 한 방울</strong> 둘러 마무리한다
+        </div>
+      </li>
+    </ol>
+  </div>
+
+  <div class="section-gap"></div>
+
+  <!-- ════ 재료 대체 ════ -->
+  <div class="section">
+    <span class="section-label">Substitute</span>
+    <div class="section-title">재료 대체</div>
+    <div class="sub-grid">
+      <div class="sub-card">
+        <div class="sub-card-from">참치캔 대신</div>
+        <div class="sub-card-to">돼지고기 100g</div>
+        <div class="sub-card-note">조리시간 +3분</div>
+      </div>
+      <div class="sub-card">
+        <div class="sub-card-from">참치캔 대신</div>
+        <div class="sub-card-to">스팸 / 햄</div>
+        <div class="sub-card-note">깍둑썰기</div>
+      </div>
+      <div class="sub-card">
+        <div class="sub-card-from">참치캔 대신</div>
+        <div class="sub-card-to">계란 1~2개</div>
+        <div class="sub-card-note">마지막에 풀어넣기</div>
+      </div>
+      <div class="sub-card">
+        <div class="sub-card-from">묵은지 대신</div>
+        <div class="sub-card-to">신김치 + 식초</div>
+        <div class="sub-card-note">고추장 1/2작은술 추가</div>
+      </div>
+      <div class="sub-card">
+        <div class="sub-card-from">두부 대신</div>
+        <div class="sub-card-to">떡 / 냉동 만두</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    초간단 김치찌개 &middot; 냄비 하나로 15분 완성 &middot;
+    Photos by <a href="https://www.pexels.com">Pexels</a>
+  </footer>
+
+</div>
+
+</body>
+</html>
