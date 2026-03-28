@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>색상 팔레트 생성기</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+  .copied-flash {
+    animation: flashIn 0.3s ease-out;
+  }
+  @keyframes flashIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const { useState, useCallback, useRef, useEffect } = React;
+
+// ========================================
+// 색상 변환 유틸리티
+// ========================================
+
+function hexToHsl(hex) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) {
+    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+  }
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+function hslToHex(h, s, l) {
+  s /= 100;
+  l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * Math.max(0, Math.min(1, color)))
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+}
+
+function generatePalette(baseHex) {
+  const { h, s, l } = hexToHsl(baseHex);
+
+  const steps = [
+    { level: 50,  lightness: 95, satFactor: 0.30 },
+    { level: 100, lightness: 90, satFactor: 0.40 },
+    { level: 200, lightness: 82, satFactor: 0.55 },
+    { level: 300, lightness: 72, satFactor: 0.70 },
+    { level: 400, lightness: 60, satFactor: 0.85 },
+    { level: 500, lightness: null, satFactor: 1.0 },
+    { level: 600, lightness: 40, satFactor: 0.95 },
+    { level: 700, lightness: 32, satFactor: 0.85 },
+    { level: 800, lightness: 22, satFactor: 0.75 },
+    { level: 900, lightness: 14, satFactor: 0.65 },
+  ];
+
+  return steps.map(({ level, lightness, satFactor }) => {
+    const newL = level === 500 ? l : lightness;
+    const newS = Math.min(100, s * satFactor);
+    const hex = level === 500 ? baseHex.toUpperCase() : hslToHex(h, newS, newL);
+    return { level, hex };
+  });
+}
+
+function isLightColor(hex) {
+  hex = hex.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55;
+}
+
+function isValidHex(hex) {
+  return /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(hex);
+}
+
+// ========================================
+// 디자인 시스템 컴포넌트
+// ========================================
+
+function Button({ children, onClick, variant = 'primary', size = 'md', disabled = false, className = '' }) {
+  const base = 'font-medium border transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1';
+  const variants = {
+    primary: 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 focus:ring-blue-400',
+    secondary: 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:ring-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700',
+    ghost: 'bg-transparent text-gray-600 border-transparent hover:bg-gray-100 focus:ring-gray-300 dark:text-gray-300 dark:hover:bg-gray-700',
+  };
+  const sizes = {
+    sm: 'px-3 py-1.5 text-sm rounded',
+    md: 'px-4 py-2 text-sm rounded-md',
+    lg: 'px-6 py-3 text-base rounded-md',
+  };
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${base} ${variants[variant]} ${sizes[size]} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Input({ label, value, onChange, placeholder, type = 'text', error, className = '', ...props }) {
+  return (
+    <div className={className}>
+      {label && <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label>}
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`w-full px-3 py-2 border rounded-md text-sm bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 ${error ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'}`}
+        {...props}
+      />
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </div>
+  );
+}
+
+function Card({ children, className = '' }) {
+  return (
+    <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+// ========================================
+// 색상 칩 컴포넌트
+// ========================================
+
+function ColorChip({ level, hex, dark }) {
+  const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef(null);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(hex).then(() => {
+      setCopied(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setCopied(false), 1200);
+    });
+  }, [hex]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const light = isLightColor(hex);
+  const textColor = light ? 'text-gray-900' : 'text-white';
+  const subTextColor = light ? 'text-gray-600' : 'text-gray-200';
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="w-full text-left focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-inset transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+      style={{ backgroundColor: hex }}
+      aria-label={`${level}단계 색상 ${hex} 클립보드에 복사`}
+    >
+      <div className="px-4 py-4 flex items-center justify-between relative">
+        <div>
+          <span className={`font-semibold text-sm ${textColor}`}>{level}</span>
+        </div>
+        <div className="text-right">
+          {copied ? (
+            <span className={`text-sm font-medium ${textColor} copied-flash`}>복사됨!</span>
+          ) : (
+            <span className={`text-sm font-mono ${subTextColor}`}>{hex}</span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ========================================
+// 팔레트 카드 컴포넌트
+// ========================================
+
+function PaletteCard({ baseHex }) {
+  const palette = generatePalette(baseHex);
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          생성된 팔레트
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          색상 칩을 클릭하면 HEX 코드가 복사됩니다
+        </p>
+      </div>
+      <div className="divide-y divide-gray-200 dark:divide-gray-600 divide-opacity-20">
+        {palette.map(({ level, hex }) => (
+          <ColorChip key={level} level={level} hex={hex} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ========================================
+// 미리보기 섹션
+// ========================================
+
+function PreviewSection({ baseHex }) {
+  const palette = generatePalette(baseHex);
+  const base = palette.find(p => p.level === 500);
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          활용 미리보기
+        </h3>
+      </div>
+      <div className="p-4 space-y-4">
+        {/* 버튼 미리보기 */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">버튼</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: base.hex,
+                color: isLightColor(base.hex) ? '#1a1a1a' : '#ffffff'
+              }}
+            >
+              기본 버튼
+            </button>
+            <button
+              className="px-4 py-2 rounded-md text-sm font-medium border-2 transition-colors"
+              style={{
+                borderColor: base.hex,
+                color: base.hex,
+                backgroundColor: 'transparent'
+              }}
+            >
+              아웃라인 버튼
+            </button>
+            <button
+              className="px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: palette.find(p => p.level === 50).hex,
+                color: palette.find(p => p.level === 700).hex
+              }}
+            >
+              연한 버튼
+            </button>
+          </div>
+        </div>
+
+        {/* 배지 미리보기 */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">배지</p>
+          <div className="flex flex-wrap gap-2">
+            {[50, 100, 200, 500, 700, 900].map(level => {
+              const item = palette.find(p => p.level === level);
+              return (
+                <span
+                  key={level}
+                  className="px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  style={{
+                    backgroundColor: item.hex,
+                    color: isLightColor(item.hex) ? '#374151' : '#ffffff'
+                  }}
+                >
+                  {level}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 그라데이션 바 */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">전체 스펙트럼</p>
+          <div className="flex rounded-md overflow-hidden h-10">
+            {palette.map(({ level, hex }) => (
+              <div
+                key={level}
+                className="flex-1"
+                style={{ backgroundColor: hex }}
+                title={`${level}: ${hex}`}
+              />
+            ))}
+          </div>
+          <div className="flex mt-1">
+            {palette.map(({ level }) => (
+              <div key={level} className="flex-1 text-center">
+                <span className="text-[10px] text-gray-400">{level}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ========================================
+// CSS 코드 내보내기
+// ========================================
+
+function ExportSection({ baseHex }) {
+  const [copied, setCopied] = useState(false);
+  const palette = generatePalette(baseHex);
+
+  const cssCode = `:root {\n${palette.map(({ level, hex }) => `  --color-${level}: ${hex};`).join('\n')}\n}`;
+
+  const tailwindCode = `colors: {\n  custom: {\n${palette.map(({ level, hex }) => `    ${level}: '${hex}',`).join('\n')}\n  }\n}`;
+
+  const [tab, setTab] = useState('css');
+
+  const code = tab === 'css' ? cssCode : tailwindCode;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">코드 내보내기</h3>
+        <div className="flex border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden">
+          <button
+            onClick={() => setTab('css')}
+            className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+              tab === 'css'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            CSS 변수
+          </button>
+          <button
+            onClick={() => setTab('tailwind')}
+            className={`px-3 py-1 text-xs font-medium border-l border-gray-300 dark:border-gray-600 transition-colors cursor-pointer ${
+              tab === 'tailwind'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            Tailwind
+          </button>
+        </div>
+      </div>
+      <div className="relative">
+        <pre className="p-4 text-xs font-mono text-gray-700 dark:text-gray-300 overflow-x-auto bg-gray-50 dark:bg-gray-900">
+          {code}
+        </pre>
+        <button
+          onClick={handleCopy}
+          className="absolute top-2 right-2 px-2.5 py-1 text-xs font-medium bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+        >
+          {copied ? '복사됨!' : '복사'}
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+// ========================================
+// 프리셋 색상
+// ========================================
+
+const PRESET_COLORS = [
+  { name: '레드', hex: '#F44336' },
+  { name: '핑크', hex: '#E91E63' },
+  { name: '퍼플', hex: '#9C27B0' },
+  { name: '인디고', hex: '#3F51B5' },
+  { name: '블루', hex: '#2196F3' },
+  { name: '티얼', hex: '#009688' },
+  { name: '그린', hex: '#4CAF50' },
+  { name: '앰버', hex: '#FFC107' },
+  { name: '오렌지', hex: '#FF9800' },
+  { name: '브라운', hex: '#795548' },
+];
+
+// ========================================
+// 앱 컴포넌트
+// ========================================
+
+function App() {
+  const [hexInput, setHexInput] = useState('#2196F3');
+  const [activeColor, setActiveColor] = useState('#2196F3');
+  const [darkMode, setDarkMode] = useState(false);
+  const [inputError, setInputError] = useState('');
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  const handleHexInputChange = (e) => {
+    let val = e.target.value;
+    setHexInput(val);
+
+    if (!val.startsWith('#')) val = '#' + val;
+    if (isValidHex(val)) {
+      setInputError('');
+      if (val.replace('#', '').length === 3 || val.replace('#', '').length === 6) {
+        const normalized = val.replace('#', '');
+        const full = normalized.length === 3
+          ? '#' + normalized[0] + normalized[0] + normalized[1] + normalized[1] + normalized[2] + normalized[2]
+          : '#' + normalized;
+        setActiveColor(full.toUpperCase());
+      }
+    } else if (val.length > 1) {
+      setInputError('올바른 HEX 코드를 입력하세요 (예: #FF5722)');
+    }
+  };
+
+  const handleColorPickerChange = (e) => {
+    const val = e.target.value.toUpperCase();
+    setHexInput(val);
+    setActiveColor(val);
+    setInputError('');
+  };
+
+  const handlePresetClick = (hex) => {
+    setHexInput(hex);
+    setActiveColor(hex);
+    setInputError('');
+  };
+
+  return (
+    <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* 헤더 */}
+      <header className={`border-b ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <h1 className={`text-lg font-bold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+              색상 팔레트 생성기
+            </h1>
+            <p className={`text-xs mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Material Design 스타일 색상 팔레트를 생성합니다
+            </p>
+          </div>
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className={`p-2 rounded-md border transition-colors cursor-pointer ${
+              darkMode
+                ? 'bg-gray-700 border-gray-600 text-yellow-400 hover:bg-gray-600'
+                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+            }`}
+            aria-label={darkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}
+          >
+            {darkMode ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </header>
+
+      {/* 메인 */}
+      <main className="max-w-5xl mx-auto px-4 py-6">
+        {/* 색상 입력 영역 */}
+        <Card className="p-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* 컬러 피커 */}
+            <div className="flex items-end gap-3">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  컬러 피커
+                </label>
+                <div className="relative">
+                  <input
+                    type="color"
+                    value={activeColor}
+                    onChange={handleColorPickerChange}
+                    className="w-14 h-10 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
+                    style={{ padding: '2px' }}
+                  />
+                </div>
+              </div>
+              <Input
+                label="HEX 코드"
+                value={hexInput}
+                onChange={handleHexInputChange}
+                placeholder="#2196F3"
+                error={inputError}
+                className="w-40"
+                maxLength={7}
+                spellCheck={false}
+              />
+            </div>
+
+            {/* 프리셋 */}
+            <div className="flex-1">
+              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                프리셋 색상
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_COLORS.map(({ name, hex }) => (
+                  <button
+                    key={hex}
+                    onClick={() => handlePresetClick(hex)}
+                    className={`w-8 h-8 rounded border-2 transition-transform hover:scale-110 cursor-pointer ${
+                      activeColor === hex
+                        ? 'border-gray-900 dark:border-white scale-110'
+                        : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: hex }}
+                    title={name}
+                    aria-label={`${name} 프리셋 색상 선택`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* 팔레트 + 미리보기 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <PaletteCard baseHex={activeColor} />
+          <div className="space-y-6">
+            <PreviewSection baseHex={activeColor} />
+            <ExportSection baseHex={activeColor} />
+          </div>
+        </div>
+      </main>
+
+      {/* 푸터 */}
+      <footer className={`border-t py-4 text-center text-xs ${
+        darkMode ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
+      }`}>
+        HEX to HSL 변환 기반 Material Design 스타일 팔레트 생성기
+      </footer>
+    </div>
+  );
+}
+
+// ========================================
+// 렌더링
+// ========================================
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+</script>
+</body>
+</html>
