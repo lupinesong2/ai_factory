@@ -74,16 +74,11 @@ function generatePalette(baseHex) {
   const { h, s, l } = hexToHsl(baseHex);
 
   const steps = [
-    { level: 50,  lightness: 95, satFactor: 0.30 },
-    { level: 100, lightness: 90, satFactor: 0.40 },
-    { level: 200, lightness: 82, satFactor: 0.55 },
-    { level: 300, lightness: 72, satFactor: 0.70 },
-    { level: 400, lightness: 60, satFactor: 0.85 },
+    { level: 100, lightness: 90, satFactor: 0.35 },
+    { level: 300, lightness: 70, satFactor: 0.65 },
     { level: 500, lightness: null, satFactor: 1.0 },
-    { level: 600, lightness: 40, satFactor: 0.95 },
-    { level: 700, lightness: 32, satFactor: 0.85 },
-    { level: 800, lightness: 22, satFactor: 0.75 },
-    { level: 900, lightness: 14, satFactor: 0.65 },
+    { level: 700, lightness: 30, satFactor: 0.85 },
+    { level: 900, lightness: 12, satFactor: 0.60 },
   ];
 
   return steps.map(({ level, lightness, satFactor }) => {
@@ -188,211 +183,47 @@ function ColorChip({ level, hex, dark }) {
   return (
     <button
       onClick={handleCopy}
-      className="w-full text-left focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-inset transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+      className="flex-1 h-full flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-inset hover:opacity-90 active:scale-[0.97] cursor-pointer relative"
       style={{ backgroundColor: hex }}
       aria-label={`${level}단계 색상 ${hex} 클립보드에 복사`}
     >
-      <div className="px-4 py-4 flex items-center justify-between relative">
-        <div>
-          <span className={`font-semibold text-sm ${textColor}`}>{level}</span>
-        </div>
-        <div className="text-right">
-          {copied ? (
-            <span className={`text-sm font-medium ${textColor} copied-flash`}>복사됨!</span>
-          ) : (
-            <span className={`text-sm font-mono ${subTextColor}`}>{hex}</span>
-          )}
-        </div>
-      </div>
+      {copied ? (
+        <span className={`text-xs font-medium ${textColor} copied-flash`}>복사됨!</span>
+      ) : (
+        <span className={`text-[10px] font-mono ${subTextColor}`}>{hex}</span>
+      )}
     </button>
   );
 }
 
 // ========================================
-// 팔레트 카드 컴포넌트
+// 스펙트럼 컴포넌트
 // ========================================
 
-function PaletteCard({ baseHex }) {
+function SpectrumSection({ baseHex }) {
   const palette = generatePalette(baseHex);
 
   return (
     <Card className="overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          생성된 팔레트
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">스펙트럼</h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
           색상 칩을 클릭하면 HEX 코드가 복사됩니다
         </p>
       </div>
-      <div className="divide-y divide-gray-200 dark:divide-gray-600 divide-opacity-20">
-        {palette.map(({ level, hex }) => (
-          <ColorChip key={level} level={level} hex={hex} />
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-// ========================================
-// 미리보기 섹션
-// ========================================
-
-function PreviewSection({ baseHex }) {
-  const palette = generatePalette(baseHex);
-  const base = palette.find(p => p.level === 500);
-
-  return (
-    <Card className="overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          활용 미리보기
-        </h3>
-      </div>
-      <div className="p-4 space-y-4">
-        {/* 버튼 미리보기 */}
-        <div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">버튼</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              style={{
-                backgroundColor: base.hex,
-                color: isLightColor(base.hex) ? '#1a1a1a' : '#ffffff'
-              }}
-            >
-              기본 버튼
-            </button>
-            <button
-              className="px-4 py-2 rounded-md text-sm font-medium border-2 transition-colors"
-              style={{
-                borderColor: base.hex,
-                color: base.hex,
-                backgroundColor: 'transparent'
-              }}
-            >
-              아웃라인 버튼
-            </button>
-            <button
-              className="px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              style={{
-                backgroundColor: palette.find(p => p.level === 50).hex,
-                color: palette.find(p => p.level === 700).hex
-              }}
-            >
-              연한 버튼
-            </button>
-          </div>
+      <div className="p-4">
+        <div className="flex rounded-md overflow-hidden h-16">
+          {palette.map(({ level, hex }) => (
+            <ColorChip key={level} level={level} hex={hex} />
+          ))}
         </div>
-
-        {/* 배지 미리보기 */}
-        <div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">배지</p>
-          <div className="flex flex-wrap gap-2">
-            {[50, 100, 200, 500, 700, 900].map(level => {
-              const item = palette.find(p => p.level === level);
-              return (
-                <span
-                  key={level}
-                  className="px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  style={{
-                    backgroundColor: item.hex,
-                    color: isLightColor(item.hex) ? '#374151' : '#ffffff'
-                  }}
-                >
-                  {level}
-                </span>
-              );
-            })}
-          </div>
+        <div className="flex mt-1">
+          {palette.map(({ level }) => (
+            <div key={level} className="flex-1 text-center">
+              <span className="text-[10px] text-gray-400">{level}</span>
+            </div>
+          ))}
         </div>
-
-        {/* 그라데이션 바 */}
-        <div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">전체 스펙트럼</p>
-          <div className="flex rounded-md overflow-hidden h-10">
-            {palette.map(({ level, hex }) => (
-              <div
-                key={level}
-                className="flex-1"
-                style={{ backgroundColor: hex }}
-                title={`${level}: ${hex}`}
-              />
-            ))}
-          </div>
-          <div className="flex mt-1">
-            {palette.map(({ level }) => (
-              <div key={level} className="flex-1 text-center">
-                <span className="text-[10px] text-gray-400">{level}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-// ========================================
-// CSS 코드 내보내기
-// ========================================
-
-function ExportSection({ baseHex }) {
-  const [copied, setCopied] = useState(false);
-  const palette = generatePalette(baseHex);
-
-  const cssCode = `:root {\n${palette.map(({ level, hex }) => `  --color-${level}: ${hex};`).join('\n')}\n}`;
-
-  const tailwindCode = `colors: {\n  custom: {\n${palette.map(({ level, hex }) => `    ${level}: '${hex}',`).join('\n')}\n  }\n}`;
-
-  const [tab, setTab] = useState('css');
-
-  const code = tab === 'css' ? cssCode : tailwindCode;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  };
-
-  return (
-    <Card className="overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">코드 내보내기</h3>
-        <div className="flex border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden">
-          <button
-            onClick={() => setTab('css')}
-            className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
-              tab === 'css'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-            }`}
-          >
-            CSS 변수
-          </button>
-          <button
-            onClick={() => setTab('tailwind')}
-            className={`px-3 py-1 text-xs font-medium border-l border-gray-300 dark:border-gray-600 transition-colors cursor-pointer ${
-              tab === 'tailwind'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-            }`}
-          >
-            Tailwind
-          </button>
-        </div>
-      </div>
-      <div className="relative">
-        <pre className="p-4 text-xs font-mono text-gray-700 dark:text-gray-300 overflow-x-auto bg-gray-50 dark:bg-gray-900">
-          {code}
-        </pre>
-        <button
-          onClick={handleCopy}
-          className="absolute top-2 right-2 px-2.5 py-1 text-xs font-medium bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer"
-        >
-          {copied ? '복사됨!' : '복사'}
-        </button>
       </div>
     </Card>
   );
@@ -558,13 +389,9 @@ function App() {
           </div>
         </Card>
 
-        {/* 팔레트 + 미리보기 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <PaletteCard baseHex={activeColor} />
-          <div className="space-y-6">
-            <PreviewSection baseHex={activeColor} />
-            <ExportSection baseHex={activeColor} />
-          </div>
+        {/* 스펙트럼 */}
+        <div className="mb-6">
+          <SpectrumSection baseHex={activeColor} />
         </div>
       </main>
 
