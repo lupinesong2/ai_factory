@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>텍스트 → PDF 변환기</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 600px;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 20px; text-align: center; }
+    textarea {
+      width: 100%;
+      height: 300px;
+      padding: 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+    textarea:focus { outline: none; border-color: #4a90d9; }
+    .btn-group { display: flex; gap: 10px; margin-top: 16px; }
+    button {
+      flex: 1;
+      padding: 14px;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-convert { background: #4a90d9; }
+    .btn-convert:hover { background: #3a7bc8; }
+    .btn-clear { background: #e74c3c; }
+    .btn-clear:hover { background: #c0392b; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    .status { text-align: center; margin-top: 12px; font-size: 13px; color: #888; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>텍스트 → PDF 변환기</h1>
+    <textarea id="textInput" placeholder="여기에 텍스트를 입력하세요..."></textarea>
+    <div class="btn-group">
+      <button id="convertBtn" class="btn-convert" onclick="convertToPDF()">PDF 변환</button>
+      <button class="btn-clear" onclick="clearText()">초기화</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    function clearText() {
+      document.getElementById('textInput').value = '';
+      document.getElementById('textInput').focus();
+      document.getElementById('status').textContent = '';
+    }
+
+    let koreanFont = null;
+
+    async function loadFont() {
+      if (koreanFont) return koreanFont;
+      const status = document.getElementById('status');
+      status.textContent = '한글 폰트 로딩 중...';
+      const res = await fetch('https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-400-normal.ttf');
+      const buf = await res.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      koreanFont = btoa(binary);
+      status.textContent = '';
+      return koreanFont;
+    }
+
+    async function convertToPDF() {
+      const text = document.getElementById('textInput').value.trim();
+      if (!text) { alert('텍스트를 입력해주세요.'); return; }
+
+      const btn = document.getElementById('convertBtn');
+      const status = document.getElementById('status');
+      btn.disabled = true;
+      btn.textContent = '변환 중...';
+
+      try {
+        const fontBase64 = await loadFont();
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.addFileToVFS('NotoSansKR.ttf', fontBase64);
+        doc.addFont('NotoSansKR.ttf', 'NotoSansKR', 'normal');
+        doc.setFont('NotoSansKR');
+        doc.setFontSize(12);
+
+        const margin = 20;
+        const pageWidth = doc.internal.pageSize.getWidth() - margin * 2;
+        const pageHeight = doc.internal.pageSize.getHeight() - margin * 2;
+        const lineHeight = 7;
+
+        const lines = doc.splitTextToSize(text, pageWidth);
+        let y = margin;
+
+        for (const line of lines) {
+          if (y + lineHeight > pageHeight + margin) {
+            doc.addPage();
+            y = margin;
+          }
+          doc.text(line, margin, y);
+          y += lineHeight;
+        }
+
+        doc.save('output.pdf');
+        status.textContent = 'PDF 다운로드 완료!';
+        setTimeout(() => status.textContent = '', 3000);
+      } catch (e) {
+        status.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'PDF 변환';
+      }
+    }
+  </script>
+</body>
+</html>
