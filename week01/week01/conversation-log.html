@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 대화를 통한 사이트 개선 과정</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans KR', -apple-system, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 56px 48px 40px;
+    }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 36px 20px 32px; }
+    }
+
+    .header-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #ccc;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      line-height: 1.2;
+      margin: 8px 0 10px;
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 1.6rem; }
+    }
+
+    .header-desc {
+      font-size: 0.92rem;
+      font-weight: 300;
+      color: #999;
+      margin-bottom: 48px;
+    }
+
+    .round {
+      margin-bottom: 44px;
+      padding-bottom: 44px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .round:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .round-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .round-num {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #fff;
+      background: #1a1a1a;
+      border-radius: 4px;
+      padding: 4px 10px;
+      white-space: nowrap;
+    }
+
+    .round-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .chat {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .msg {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.85rem;
+      line-height: 1.7;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: #1a1a1a;
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.agent {
+      align-self: flex-start;
+      background: #f5f5f5;
+      color: #333;
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg-sender {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #bbb;
+      margin-bottom: 3px;
+    }
+
+    .msg.user .msg-sender { color: #888; }
+
+    .msg code {
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 0.78rem;
+      background: rgba(0,0,0,0.08);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .msg.user code {
+      background: rgba(255,255,255,0.15);
+    }
+
+    .result {
+      background: #fafafa;
+      border-left: 3px solid #1a1a1a;
+      padding: 12px 16px;
+      margin-top: 8px;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .result-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #bbb;
+      margin-bottom: 3px;
+    }
+
+    .result-text {
+      font-size: 0.82rem;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .result-text strong {
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    footer {
+      text-align: center;
+      padding: 28px 20px;
+      font-size: 0.7rem;
+      color: #ccc;
+      border-top: 1px solid #eee;
+      margin-top: 48px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <span class="header-label">Conversation Log</span>
+  <h1>AI 대화를 통한<br>사이트 개선 과정</h1>
+  <p class="header-desc">Claude 에이전트와 대화하며 레시피 사이트를 단계적으로 개선한 기록</p>
+
+  <!-- 1 -->
+  <div class="round">
+    <div class="round-header">
+      <span class="round-num">Round 1</span>
+      <span class="round-title">게이트 페이지 제작 요청</span>
+    </div>
+    <div class="chat">
+      <div class="msg user">
+        <div class="msg-sender">사용자</div>
+        이거 세 개 사이트 들어갈 수 있는 게이트 페이지 만들어줘
+      </div>
+      <div class="msg agent">
+        <div class="msg-sender">Claude</div>
+        3개 레시피를 썸네일 카드로 보여주고 클릭하면 각 레시피로 이동하는 <code>index.html</code> 생성했습니다.
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-label">결과</div>
+      <div class="result-text">큰 카드 타입의 <strong>index.html 게이트 페이지</strong> 초안 생성</div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="round">
+    <div class="round-header">
+      <span class="round-num">Round 2</span>
+      <span class="round-title">이미지 강조 줄이기</span>
+    </div>
+    <div class="chat">
+      <div class="msg user">
+        <div class="msg-sender">사용자</div>
+        이미 썸네일 덜 강조 되게 만들어줘
+      </div>
+      <div class="msg agent">
+        <div class="msg-sender">Claude</div>
+        썸네일 이미지에 opacity 45% + grayscale 처리 적용. 마우스 올리면 살짝 밝아지게 했습니다.
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-label">개선</div>
+      <div class="result-text">이미지 <strong>opacity + grayscale</strong>로 텍스트 대비 시각적 비중 축소</div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="round">
+    <div class="round-header">
+      <span class="round-num">Round 3</span>
+      <span class="round-title">레이아웃 변경 — 카드 → 리스트</span>
+    </div>
+    <div class="chat">
+      <div class="msg user">
+        <div class="msg-sender">사용자</div>
+        아니 큰 카드 타입 말고 리스트 타입으로 만들어줘
+      </div>
+      <div class="msg agent">
+        <div class="msg-sender">Claude</div>
+        작은 썸네일(72px) + 제목/설명 + 메타 정보가 한 줄로 나열되는 리스트 형태로 변경했습니다.
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-label">개선</div>
+      <div class="result-text">큰 카드 → <strong>컴팩트한 리스트 레이아웃</strong>으로 전면 변경</div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="round">
+    <div class="round-header">
+      <span class="round-num">Round 4</span>
+      <span class="round-title">넘버링 추가 & 인터랙션 제거</span>
+    </div>
+    <div class="chat">
+      <div class="msg user">
+        <div class="msg-sender">사용자</div>
+        넘버 붙여 주고 인터렉션 제거해
+      </div>
+      <div class="msg agent">
+        <div class="msg-sender">Claude</div>
+        01, 02, 03 넘버 추가하고 링크/호버 인터랙션을 제거했습니다.
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-label">개선</div>
+      <div class="result-text"><strong>넘버링(01, 02, 03)</strong> 추가로 시각적 정보 위계 강화, 인터랙션 제거로 정적 리스트화</div>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="round">
+    <div class="round-header">
+      <span class="round-num">Round 5</span>
+      <span class="round-title">호버 복원 & 이미지 투명도 제거</span>
+    </div>
+    <div class="chat">
+      <div class="msg user">
+        <div class="msg-sender">사용자</div>
+        링크/호버 인터렉션 살려주고, 이미지 오파시티 제거 해줘
+      </div>
+      <div class="msg agent">
+        <div class="msg-sender">Claude</div>
+        링크와 호버 효과를 복원하고 이미지 opacity를 제거해서 원본 밝기로 되돌렸습니다.
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-label">개선</div>
+      <div class="result-text"><strong>클릭 가능한 링크 + 호버 복원</strong>, 이미지는 원본 밝기로 — 사용성과 시인성 동시 확보</div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="round">
+    <div class="round-header">
+      <span class="round-num">Round 6</span>
+      <span class="round-title">404 오류 해결 — 루트 리다이렉트</span>
+    </div>
+    <div class="chat">
+      <div class="msg user">
+        <div class="msg-sender">사용자</div>
+        https://lupinesong2.github.io/ai_factory/ 여기로 누르면 404 페이지 떠
+      </div>
+      <div class="msg agent">
+        <div class="msg-sender">Claude</div>
+        루트에 index.html이 없어서 그렇습니다. 루트에서 week01/로 자동 이동시키는 리다이렉트 페이지를 만들어 푸시했습니다.
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-label">개선</div>
+      <div class="result-text">루트 <strong>404 오류 해결</strong> — <code>meta refresh</code>로 <code>week01/</code>에 자동 리다이렉트</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  AI Factory Week 01 &middot; 에이전트 대화 기반 사이트 개선 기록 &middot; Claude Code
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>알리오 올리오 파스타</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans KR', -apple-system, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap { max-width: 800px; margin: 0 auto; }
+
+    /* HEADER */
+    .header { padding: 56px 48px 0; }
+    .header-label {
+      font-size: 0.65rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 3px; color: #ccc;
+    }
+    .header h1 {
+      font-size: 2.8rem; font-weight: 900;
+      letter-spacing: -1.5px; line-height: 1.2; margin: 8px 0 10px;
+    }
+    .header-desc { font-size: 0.95rem; font-weight: 300; color: #999; margin-bottom: 0; }
+    .hero-img {
+      width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+      display: block; border-radius: 6px; margin: 24px 0;
+    }
+    .meta-bar {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid #eee; border-bottom: 1px solid #eee;
+    }
+    .meta-item { padding: 20px 0; text-align: center; }
+    .meta-item:not(:last-child) { border-right: 1px solid #eee; }
+    .meta-value { font-size: 1.2rem; font-weight: 700; display: block; }
+    .meta-label {
+      font-size: 0.68rem; color: #bbb;
+      text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px;
+    }
+    @media (max-width: 640px) {
+      .header { padding: 36px 24px 0; }
+      .header h1 { font-size: 2rem; }
+    }
+
+    /* SECTION */
+    .section { padding: 20px 48px 40px; }
+    .section-label {
+      font-size: 0.6rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 3px; color: #ccc;
+    }
+    .section-title { font-size: 1.25rem; font-weight: 700; margin: 2px 0 24px; }
+    @media (max-width: 640px) { .section { padding: 16px 24px 32px; } }
+
+    .section-gap { height: 56px; }
+    @media (max-width: 640px) { .section-gap { height: 40px; } }
+
+    /* IMAGES */
+    .section-img {
+      width: calc(100% - 96px); margin: 0 48px;
+      aspect-ratio: 2 / 1; object-fit: cover; display: block; border-radius: 6px;
+    }
+    @media (max-width: 640px) {
+      .section-img { width: calc(100% - 48px); margin: 0 24px; }
+    }
+
+    /* 재료 */
+    .ing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; }
+    @media (max-width: 640px) { .ing-grid { grid-template-columns: 1fr; } }
+    .ing-group {
+      grid-column: 1 / -1;
+      font-size: 0.68rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.5px; color: #ccc;
+      padding: 20px 0 6px;
+    }
+    .ing-group:first-child { padding-top: 0; }
+    .ing-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 9px 0; border-bottom: 1px solid #f5f5f5;
+      font-size: 0.9rem; cursor: pointer; user-select: none; transition: opacity 0.15s;
+    }
+    .ing-row.checked { opacity: 0.25; text-decoration: line-through; }
+    .ing-qty { font-size: 0.82rem; color: #999; white-space: nowrap; }
+    .ing-note { font-size: 0.7rem; color: #bbb; font-weight: 300; }
+
+    /* 만드는 법 */
+    .step-list { list-style: none; counter-reset: step; }
+    .step-item {
+      counter-increment: step;
+      display: grid; grid-template-columns: 40px 1fr; gap: 0 14px;
+      padding: 20px 0; border-bottom: 1px solid #f3f3f3; align-items: start;
+    }
+    .step-item:last-child { border-bottom: none; }
+    .step-num { font-size: 1.5rem; font-weight: 900; color: #e0e0e0; line-height: 1.3; }
+    .step-body { font-size: 0.92rem; line-height: 1.75; }
+    .step-body strong { font-weight: 600; }
+    .step-time {
+      display: inline-block; font-size: 0.68rem; font-weight: 600; color: #bbb;
+      border: 1px solid #e8e8e8; border-radius: 3px; padding: 1px 7px;
+      margin-left: 4px; vertical-align: middle;
+    }
+    .step-sub { display: block; font-size: 0.78rem; color: #aaa; font-weight: 300; margin-top: 4px; }
+
+    /* 재료 대체 카드 */
+    .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    @media (max-width: 640px) { .sub-grid { grid-template-columns: 1fr 1fr; } }
+    .sub-card {
+      border: 1px solid #eee; border-radius: 8px; padding: 18px 16px;
+      transition: border-color 0.15s;
+    }
+    .sub-card:hover { border-color: #ccc; }
+    .sub-card-from {
+      font-size: 0.72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px; color: #bbb; margin-bottom: 6px;
+    }
+    .sub-card-to { font-size: 0.95rem; font-weight: 600; color: #333; line-height: 1.4; }
+    .sub-card-note { font-size: 0.75rem; color: #aaa; margin-top: 4px; }
+
+    /* FOOTER */
+    footer {
+      text-align: center; padding: 28px 20px;
+      font-size: 0.7rem; color: #ccc; border-top: 1px solid #eee;
+    }
+    footer a { color: #bbb; }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <span class="header-label">Recipe</span>
+    <h1>알리오 올리오<br>파스타</h1>
+    <p class="header-desc">마늘과 올리브오일만으로 완성하는 이탈리아 정통 파스타 — 냉장고가 텅 비어도 괜찮아요.</p>
+    <img class="hero-img" src="./thumbnails/pasta.jpg" alt="알리오 올리오 파스타">
+    <div class="meta-bar">
+      <div class="meta-item">
+        <span class="meta-value">15분</span>
+        <span class="meta-label">조리시간</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-value">1인분</span>
+        <span class="meta-label">분량</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-value">쉬움</span>
+        <span class="meta-label">난이도</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-gap"></div>
+
+  <div class="section">
+    <span class="section-label">Ingredients</span>
+    <div class="section-title">재료</div>
+    <div class="ing-grid">
+
+      <span class="ing-group">주재료</span>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>스파게티 면</span>
+        <span class="ing-qty">100g</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>마늘</span>
+        <span class="ing-qty">4~5쪽</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>올리브오일 (엑스트라 버진)</span>
+        <span class="ing-qty">4큰술</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>페페론치노 (건고추)</span>
+        <span class="ing-qty">2~3개</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>파슬리 (선택)</span>
+        <span class="ing-qty">약간</span>
+      </div>
+
+      <span class="ing-group">양념</span>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>소금</span>
+        <span class="ing-qty">넉넉히 (면수용)</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>후추</span>
+        <span class="ing-qty">약간</span>
+      </div>
+      <div class="ing-row" onclick="this.classList.toggle('checked')">
+        <span>파마산 치즈 (선택)</span>
+        <span class="ing-qty">취향껏</span>
+      </div>
+
+    </div>
+  </div>
+  <img class="section-img" src="./thumbnails/pasta_ingredient.png" alt="파스타 재료">
+
+  <div class="section-gap"></div>
+
+  <div class="section">
+    <span class="section-label">Directions</span>
+    <div class="section-title">만드는 법</div>
+    <ol class="step-list">
+
+      <li class="step-item">
+        <span class="step-num">01</span>
+        <div class="step-body">
+          <strong>면 삶기 준비</strong> — 냄비에 물을 넉넉히 끓이고, 끓어오르면 소금을 손으로 한 줌 넣어주세요.
+          <span class="step-time">3분</span>
+          <span class="step-sub">물이 짭조름하게 느껴질 정도여야 면에 간이 배어요. 면수는 나중에 꼭 한 컵 남겨두세요.</span>
+        </div>
+      </li>
+
+      <li class="step-item">
+        <span class="step-num">02</span>
+        <div class="step-body">
+          <strong>면 삶기</strong> — 스파게티를 넣고 봉지에 적힌 시간보다 <strong>1분 짧게</strong> 삶아주세요.
+          <span class="step-time">7분</span>
+          <span class="step-sub">알덴테로 살짝 덜 익혀야 소스와 볶을 때 딱 맞게 익어요.</span>
+        </div>
+      </li>
+
+      <li class="step-item">
+        <span class="step-num">03</span>
+        <div class="step-body">
+          <strong>마늘 & 페페론치노 볶기</strong> — 면을 삶는 동안, 팬에 올리브오일을 두르고 <strong>약불</strong>에서 편 썬 마늘과 페페론치노를 넣어 볶아주세요.
+          <span class="step-time">4분</span>
+          <span class="step-sub">마늘이 노릇하게 색이 들면 불을 끄거나 줄이세요. 타면 쓴맛이 나요.</span>
+        </div>
+      </li>
+
+      <li class="step-item">
+        <span class="step-num">04</span>
+        <div class="step-body">
+          <strong>면수 추가 & 유화</strong> — 삶은 면을 건져서 팬에 넣고, 면수 3~4큰술을 부어 강불에서 30초간 빠르게 볶아주세요.
+          <span class="step-time">1분</span>
+          <span class="step-sub">면수의 전분이 오일과 섞여 부드러운 소스가 만들어져요. 면이 마르면 면수를 조금씩 더 추가하세요.</span>
+        </div>
+      </li>
+
+      <li class="step-item">
+        <span class="step-num">05</span>
+        <div class="step-body">
+          <strong>마무리</strong> — 불을 끄고 후추를 넉넉히 갈아 넣은 뒤, 파슬리나 파마산 치즈를 올려 바로 드세요.
+          <span class="step-time">1분 미만</span>
+          <span class="step-sub">접시를 미리 따뜻하게 데워두면 더 맛있게 먹을 수 있어요.</span>
+        </div>
+      </li>
+
+    </ol>
+  </div>
+
+  <div class="section-gap"></div>
+
+  <!-- 재료 대체 -->
+  <div class="section">
+    <span class="section-label">Substitute</span>
+    <div class="section-title">재료 대체</div>
+    <div class="sub-grid">
+
+      <div class="sub-card">
+        <div class="sub-card-from">페페론치노 대신</div>
+        <div class="sub-card-to">청양고추 1개</div>
+        <div class="sub-card-note">대형마트에서도 페페론치노를 못 찾을 때. 칼칼함은 비슷해요.</div>
+      </div>
+
+      <div class="sub-card">
+        <div class="sub-card-from">엑스트라 버진 대신</div>
+        <div class="sub-card-to">일반 올리브오일</div>
+        <div class="sub-card-note">향이 조금 약하지만 충분히 맛있어요. 식용유는 비추.</div>
+      </div>
+
+      <div class="sub-card">
+        <div class="sub-card-from">스파게티 대신</div>
+        <div class="sub-card-to">링귀네 / 페투치네</div>
+        <div class="sub-card-note">납작한 면도 잘 어울려요. 삶는 시간만 조절하세요.</div>
+      </div>
+
+      <div class="sub-card">
+        <div class="sub-card-from">파슬리 대신</div>
+        <div class="sub-card-to">쪽파 or 바질</div>
+        <div class="sub-card-note">신선한 허브라면 뭐든 OK. 없어도 맛에 큰 지장 없어요.</div>
+      </div>
+
+      <div class="sub-card">
+        <div class="sub-card-from">파마산 치즈 대신</div>
+        <div class="sub-card-to">슬라이스 체다치즈</div>
+        <div class="sub-card-note">정통은 아니지만 고소함 보완용으로 올려도 괜찮아요.</div>
+      </div>
+
+      <div class="sub-card">
+        <div class="sub-card-from">생마늘 대신</div>
+        <div class="sub-card-to">다진 마늘 (튜브)</div>
+        <div class="sub-card-note">1쪽 = 약 1작은술. 단, 수분이 많아 튈 수 있으니 주의하세요.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    알리오 올리오 파스타 &middot; 마늘과 올리브오일로 완성하는 15분 이탈리안 &middot;
+    Photos by <a href="https://www.pexels.com">Pexels</a>
+  </footer>
+
+</div>
+
+</body>
+</html>

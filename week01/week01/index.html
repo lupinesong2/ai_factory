@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>초간단 레시피 모음</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans KR', -apple-system, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 56px 48px;
+    }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 36px 20px; }
+    }
+
+    .header-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #ccc;
+    }
+
+    h1 {
+      font-size: 2.6rem;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      line-height: 1.2;
+      margin: 8px 0 10px;
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 1.8rem; }
+    }
+
+    .header-desc {
+      font-size: 0.95rem;
+      font-weight: 300;
+      color: #999;
+      margin-bottom: 48px;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .list-item {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      text-decoration: none;
+      color: inherit;
+      padding: 24px 0;
+      border-bottom: 1px solid #f3f3f3;
+      transition: opacity 0.15s;
+    }
+
+    .list-item:hover {
+      opacity: 0.6;
+    }
+
+    .list-item:first-child {
+      border-top: 1px solid #f3f3f3;
+    }
+
+    .list-num {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: #e0e0e0;
+      flex-shrink: 0;
+      width: 32px;
+      text-align: center;
+    }
+
+    .list-thumb {
+      width: 72px;
+      height: 72px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex-shrink: 0;
+      filter: grayscale(20%);
+    }
+
+    @media (max-width: 640px) {
+      .list-thumb {
+        width: 56px;
+        height: 56px;
+      }
+    }
+
+    .list-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .list-tag {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #ccc;
+      margin-bottom: 2px;
+    }
+
+    .list-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .list-desc {
+      font-size: 0.82rem;
+      font-weight: 300;
+      color: #999;
+    }
+
+    .list-meta {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .list-meta span {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: #bbb;
+      border: 1px solid #e8e8e8;
+      border-radius: 3px;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 640px) {
+      .list-meta { display: none; }
+    }
+
+    footer {
+      text-align: center;
+      padding: 28px 20px;
+      font-size: 0.7rem;
+      color: #ccc;
+      border-top: 1px solid #eee;
+      margin-top: 56px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <span class="header-label">Quick Recipes</span>
+  <h1>초간단 레시피 모음</h1>
+  <p class="header-desc">15분 안에 뚝딱, 자취생을 위한 간편 레시피 3종</p>
+
+  <div class="list">
+
+    <a class="list-item" href="kimchi-jjigae.html">
+      <span class="list-num">01</span>
+      <img class="list-thumb" src="thumbnails/kimchi-jjigae.jpg" alt="김치찌개">
+      <div class="list-info">
+        <div class="list-tag">Korean</div>
+        <div class="list-title">초간단 김치찌개</div>
+        <div class="list-desc">참치캔과 묵은지로 끓이는 냄비 하나 김치찌개</div>
+      </div>
+      <div class="list-meta">
+        <span>15분</span>
+        <span>1인분</span>
+      </div>
+    </a>
+
+    <a class="list-item" href="aglio-olio-pasta.html">
+      <span class="list-num">02</span>
+      <img class="list-thumb" src="thumbnails/pasta.jpg" alt="알리오 올리오 파스타">
+      <div class="list-info">
+        <div class="list-tag">Italian</div>
+        <div class="list-title">알리오 올리오 파스타</div>
+        <div class="list-desc">마늘과 올리브오일로 완성하는 15분 이탈리안</div>
+      </div>
+      <div class="list-meta">
+        <span>15분</span>
+        <span>1인분</span>
+      </div>
+    </a>
+
+    <a class="list-item" href="kimchi-fried-rice.html">
+      <span class="list-num">03</span>
+      <img class="list-thumb" src="thumbnails/fried-rice.png" alt="김치볶음밥">
+      <div class="list-info">
+        <div class="list-tag">Korean</div>
+        <div class="list-title">김치볶음밥</div>
+        <div class="list-desc">남은 밥과 김치로 뚝딱 만드는 한 그릇 볶음밥</div>
+      </div>
+      <div class="list-meta">
+        <span>10분</span>
+        <span>1인분</span>
+      </div>
+    </a>
+
+  </div>
+
+</div>
+
+<footer>
+  AI Factory Week 01 &middot; 초간단 레시피 모음 &middot; Photos by Pexels
+</footer>
+
+</body>
+</html>
