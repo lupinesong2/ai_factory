@@ -7,7 +7,11 @@
       "Bash(ls -la \"week_02\\(class\\)/mim/\")",
       "Bash(ls -la \"week_02\\(class\\)/qr/\")",
       "Bash(ls \"week_02\\(class\\)/\")",
-      "Bash(ls \"week_02\\(hw\\)/.claude/\")"
+      "Bash(ls \"week_02\\(hw\\)/.claude/\")",
+      "Bash(ls \"week_02\\(hw\\)/\")",
+      "Bash(head -5 \"week_02\\(hw\\)/QR생성기/index.html\" \"week_02\\(hw\\)/더치페이계산기/index.html\" \"week_02\\(hw\\)/밈생성기/index.html\" \"week_02\\(hw\\)/세금계산서/index.html\")",
+      "Bash(ls \"week_02\\(hw\\)/세금계산서/\")",
+      "Bash(ls week_02\\\\\\(hw\\\\\\)/ --hide=.claude)"
     ]
   }
 }
