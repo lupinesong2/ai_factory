@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/PC/Desktop/ai_factory/**)",
+      "Bash(ls -la \"week_02\\(class\\)/billing/\")",
+      "Bash(ls -la \"week_02\\(class\\)/dutch_pay/\")",
+      "Bash(ls -la \"week_02\\(class\\)/mim/\")",
+      "Bash(ls -la \"week_02\\(class\\)/qr/\")",
+      "Bash(ls \"week_02\\(class\\)/\")",
+      "Bash(ls \"week_02\\(hw\\)/.claude/\")"
+    ]
+  }
+}
