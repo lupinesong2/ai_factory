@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeatherNow - 실시간 날씨</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['"Noto Sans KR"', 'sans-serif'] }
+    }
+  }
+}
+</script>
+<style>
+  * { font-family: 'Noto Sans KR', sans-serif; }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+  .glass-dark {
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .bg-transition {
+    transition: background 1.5s ease-in-out;
+  }
+
+  /* Scrollbar */
+  .forecast-scroll::-webkit-scrollbar { height: 6px; }
+  .forecast-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
+  .forecast-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+
+  /* ===== Weather Animations ===== */
+
+  /* Rain */
+  @keyframes rain-fall {
+    0% { transform: translateY(-100vh) translateX(0); opacity: 1; }
+    100% { transform: translateY(100vh) translateX(-20px); opacity: 0.3; }
+  }
+  .rain-drop {
+    position: absolute;
+    width: 2px;
+    background: linear-gradient(transparent, rgba(174, 194, 224, 0.6));
+    animation: rain-fall linear infinite;
+  }
+
+  /* Snow */
+  @keyframes snow-fall {
+    0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(360deg); opacity: 0.3; }
+  }
+  .snowflake {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    opacity: 0.8;
+    animation: snow-fall linear infinite;
+  }
+
+  /* Sun Rays */
+  @keyframes ray-pulse {
+    0%, 100% { opacity: 0.15; transform: scale(1) rotate(0deg); }
+    50% { opacity: 0.3; transform: scale(1.1) rotate(5deg); }
+  }
+  .sun-ray {
+    position: absolute;
+    border-radius: 50%;
+    animation: ray-pulse ease-in-out infinite;
+  }
+
+  /* Clouds */
+  @keyframes cloud-drift {
+    0% { transform: translateX(-200px); opacity: 0; }
+    10% { opacity: 0.4; }
+    90% { opacity: 0.4; }
+    100% { transform: translateX(calc(100vw + 200px)); opacity: 0; }
+  }
+  .cloud-shape {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    filter: blur(8px);
+    animation: cloud-drift linear infinite;
+  }
+
+  /* Lightning */
+  @keyframes lightning-flash {
+    0%, 94%, 96%, 98%, 100% { opacity: 0; }
+    95% { opacity: 0.8; }
+    97% { opacity: 0.3; }
+    99% { opacity: 0.6; }
+  }
+  .lightning-overlay {
+    position: fixed;
+    inset: 0;
+    background: white;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* Fade in content */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    animation: spin 0.8s linear infinite;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+// ========================================
+// React Hooks Destructuring
+// ========================================
+const { useState, useEffect, useRef, useMemo, useCallback, createContext, useContext } = React;
+
+// ========================================
+// Constants & Configuration
+// ========================================
+const API_KEY = '1d5926b624ef458b103acdefc47d5cbc';
+const WEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather';
+const FORECAST_URL = 'https://api.openweathermap.org/data/2.5/forecast';
+
+// 한글 도시명 → 영문 매핑
+const KOREAN_TO_ENGLISH = {
+  '서울': 'Seoul', '부산': 'Busan', '인천': 'Incheon', '대구': 'Daegu',
+  '대전': 'Daejeon', '광주': 'Gwangju', '울산': 'Ulsan', '제주': 'Jeju',
+  '수원': 'Suwon', '성남': 'Seongnam', '고양': 'Goyang', '용인': 'Yongin',
+  '창원': 'Changwon', '청주': 'Cheongju', '전주': 'Jeonju', '천안': 'Cheonan',
+  '포항': 'Pohang', '김해': 'Gimhae', '춘천': 'Chuncheon', '원주': 'Wonju',
+  '강릉': 'Gangneung', '속초': 'Sokcho', '여수': 'Yeosu', '목포': 'Mokpo',
+  '경주': 'Gyeongju', '안동': 'Andong', '구미': 'Gumi', '익산': 'Iksan',
+  '군산': 'Gunsan', '제천': 'Jecheon', '충주': 'Chungju', '세종': 'Sejong',
+  '양산': 'Yangsan', '거제': 'Geoje', '통영': 'Tongyeong', '김포': 'Gimpo',
+  '파주': 'Paju', '화성': 'Hwaseong', '평택': 'Pyeongtaek', '안산': 'Ansan',
+  '시흥': 'Siheung', '광명': 'Gwangmyeong', '의정부': 'Uijeongbu',
+  '남양주': 'Namyangju', '구리': 'Guri', '하남': 'Hanam', '이천': 'Icheon',
+  '안양': 'Anyang', '부천': 'Bucheon', '의왕': 'Uiwang', '군포': 'Gunpo',
+  '오산': 'Osan', '양주': 'Yangju',
+  // 해외 도시
+  '도쿄': 'Tokyo', '오사카': 'Osaka', '베이징': 'Beijing', '상하이': 'Shanghai',
+  '뉴욕': 'New York', '런던': 'London', '파리': 'Paris', '시드니': 'Sydney',
+  '방콕': 'Bangkok', '싱가포르': 'Singapore', '두바이': 'Dubai', '로마': 'Rome',
+  '베를린': 'Berlin', '모스크바': 'Moscow', '토론토': 'Toronto',
+  '로스앤젤레스': 'Los Angeles', '샌프란시스코': 'San Francisco',
+  '홍콩': 'Hong Kong', '타이베이': 'Taipei', '하노이': 'Hanoi',
+  '자카르타': 'Jakarta', '뭄바이': 'Mumbai', '워싱턴': 'Washington',
+  '시카고': 'Chicago', '마드리드': 'Madrid', '바르셀로나': 'Barcelona',
+  '암스테르담': 'Amsterdam', '프라하': 'Prague', '비엔나': 'Vienna',
+  '취리히': 'Zurich', '밀라노': 'Milan', '리스본': 'Lisbon',
+  '아테네': 'Athens', '이스탄불': 'Istanbul', '카이로': 'Cairo',
+  '나이로비': 'Nairobi', '케이프타운': 'Cape Town', '멜버른': 'Melbourne',
+  '오클랜드': 'Auckland', '호놀룰루': 'Honolulu', '밴쿠버': 'Vancouver',
+  '시애틀': 'Seattle', '보스턴': 'Boston', '마이애미': 'Miami',
+  '라스베이거스': 'Las Vegas', '댈러스': 'Dallas', '덴버': 'Denver',
+  '뮌헨': 'Munich', '함부르크': 'Hamburg', '브뤼셀': 'Brussels',
+  '코펜하겐': 'Copenhagen', '스톡홀름': 'Stockholm', '오슬로': 'Oslo',
+  '헬싱키': 'Helsinki', '바르샤바': 'Warsaw', '부다페스트': 'Budapest',
+  '후쿠오카': 'Fukuoka', '나고야': 'Nagoya', '삿포로': 'Sapporo',
+  '교토': 'Kyoto', '요코하마': 'Yokohama', '오키나와': 'Okinawa',
+  '타이페이': 'Taipei', '칭다오': 'Qingdao', '광저우': 'Guangzhou',
+  '선전': 'Shenzhen', '충칭': 'Chongqing', '시안': 'Xian',
+  '쿠알라룸푸르': 'Kuala Lumpur', '마닐라': 'Manila', '호치민': 'Ho Chi Minh City',
+  '발리': 'Bali', '푸켓': 'Phuket', '치앙마이': 'Chiang Mai',
+  '뉴델리': 'New Delhi', '다낭': 'Da Nang', '세부': 'Cebu',
+};
+
+// 영문 → 한글 역매핑 (표시용)
+const ENGLISH_TO_KOREAN = Object.fromEntries(
+  Object.entries(KOREAN_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+function translateCity(input) {
+  const trimmed = input.trim();
+  // 정확한 한글 매핑 확인
+  if (KOREAN_TO_ENGLISH[trimmed]) return KOREAN_TO_ENGLISH[trimmed];
+  // 대소문자 무시 매핑
+  const lower = trimmed.toLowerCase();
+  for (const [kr, en] of Object.entries(KOREAN_TO_ENGLISH)) {
+    if (kr === lower || en.toLowerCase() === lower) return en;
+  }
+  // 매핑 없으면 원본 반환 (영문 도시명일 수 있음)
+  return trimmed;
+}
+
+const POPULAR_CITIES = [
+  '서울', '부산', '인천', '대구', '대전', '광주', '울산', '제주',
+  '수원', '성남', '고양', '용인', '창원', '청주', '전주', '천안',
+  '도쿄', '오사카', '베이징', '상하이', '뉴욕', '런던',
+  '파리', '시드니', '방콕', '싱가포르', '두바이', '로마',
+  '베를린', '모스크바', '토론토', '로스앤젤레스', '샌프란시스코',
+  '홍콩', '타이베이', '하노이', '자카르타', '뭄바이',
+];
+
+const KOREAN_DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+const STORAGE_KEY = 'weather_recent_cities';
+
+// ========================================
+// Helper Functions
+// ========================================
+function getRecentCities() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch { return []; }
+}
+
+function saveRecentCity(city) {
+  const recent = getRecentCities().filter(c => c.toLowerCase() !== city.toLowerCase());
+  recent.unshift(city);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(recent.slice(0, 5)));
+}
+
+function celsiusToFahrenheit(c) {
+  return (c * 9/5 + 32).toFixed(1);
+}
+
+function formatTemp(temp, unit) {
+  if (unit === 'F') return `${celsiusToFahrenheit(temp)}`;
+  return `${Math.round(temp)}`;
+}
+
+function unixToTime(unix, timezoneOffset) {
+  const date = new Date((unix + timezoneOffset) * 1000);
+  const h = date.getUTCHours().toString().padStart(2, '0');
+  const m = date.getUTCMinutes().toString().padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function getLocalTime(timezoneOffset) {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const local = new Date(utc + timezoneOffset * 1000);
+  const h = local.getHours().toString().padStart(2, '0');
+  const m = local.getMinutes().toString().padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function getLocalDate(timezoneOffset) {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const local = new Date(utc + timezoneOffset * 1000);
+  const y = local.getFullYear();
+  const mo = (local.getMonth() + 1).toString().padStart(2, '0');
+  const d = local.getDate().toString().padStart(2, '0');
+  const day = KOREAN_DAYS[local.getDay()];
+  return `${y}년 ${mo}월 ${d}일 (${day})`;
+}
+
+function windDirection(deg) {
+  const dirs = ['북', '북동', '동', '남동', '남', '남서', '서', '북서'];
+  return dirs[Math.round(deg / 45) % 8];
+}
+
+function getFlagUrl(countryCode) {
+  return `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
+}
+
+function getWeatherIconUrl(iconCode) {
+  return `https://openweathermap.org/img/wn/${iconCode}@4x.png`;
+}
+
+// Theme based on weather condition + day/night
+function getTheme(iconCode, weatherId) {
+  const isNight = iconCode && iconCode.endsWith('n');
+
+  if (weatherId >= 200 && weatherId < 300) {
+    return {
+      bg: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 60%, #1a1a2e 100%)',
+      type: 'thunderstorm'
+    };
+  }
+  if (weatherId >= 300 && weatherId < 600) {
+    return {
+      bg: isNight
+        ? 'linear-gradient(135deg, #1a1a2e 0%, #2c3e50 50%, #34495e 100%)'
+        : 'linear-gradient(135deg, #667eea 0%, #764ba2 30%, #6B8DD6 60%, #8E37D7 100%)',
+      type: 'rain'
+    };
+  }
+  if (weatherId >= 600 && weatherId < 700) {
+    return {
+      bg: isNight
+        ? 'linear-gradient(135deg, #2c3e50 0%, #4ca1af 50%, #2c3e50 100%)'
+        : 'linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 30%, #B0BEC5 60%, #CFD8DC 100%)',
+      type: 'snow'
+    };
+  }
+  if (weatherId >= 700 && weatherId < 800) {
+    return {
+      bg: 'linear-gradient(135deg, #bdc3c7 0%, #95a5a6 50%, #7f8c8d 100%)',
+      type: 'mist'
+    };
+  }
+  if (weatherId === 800) {
+    return isNight
+      ? { bg: 'linear-gradient(135deg, #0c0c1d 0%, #1a1a4e 30%, #2d1b69 60%, #1a103c 100%)', type: 'clear-night' }
+      : { bg: 'linear-gradient(135deg, #f5af19 0%, #f12711 20%, #FF6B35 40%, #4ecdc4 70%, #44b09e 100%)', type: 'sunny' };
+  }
+  if (weatherId > 800) {
+    return {
+      bg: isNight
+        ? 'linear-gradient(135deg, #1a1a2e 0%, #34495e 50%, #2c3e50 100%)'
+        : 'linear-gradient(135deg, #89ABE3 0%, #A0C4FF 30%, #BDB2FF 60%, #CDB4DB 100%)',
+      type: 'cloudy'
+    };
+  }
+
+  return {
+    bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    type: 'default'
+  };
+}
+
+// ========================================
+// Weather Animation Components
+// ========================================
+function RainAnimation() {
+  const drops = useMemo(() => {
+    return Array.from({ length: 80 }, (_, i) => ({
+      left: `${Math.random() * 100}%`,
+      height: `${15 + Math.random() * 25}px`,
+      animationDuration: `${0.5 + Math.random() * 0.5}s`,
+      animationDelay: `${Math.random() * 2}s`,
+    }));
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      {drops.map((s, i) => (
+        <div key={i} className="rain-drop" style={s} />
+      ))}
+    </div>
+  );
+}
+
+function SnowAnimation() {
+  const flakes = useMemo(() => {
+    return Array.from({ length: 60 }, (_, i) => ({
+      left: `${Math.random() * 100}%`,
+      width: `${3 + Math.random() * 6}px`,
+      height: `${3 + Math.random() * 6}px`,
+      animationDuration: `${4 + Math.random() * 6}s`,
+      animationDelay: `${Math.random() * 5}s`,
+      opacity: 0.4 + Math.random() * 0.6,
+    }));
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      {flakes.map((s, i) => (
+        <div key={i} className="snowflake" style={s} />
+      ))}
+    </div>
+  );
+}
+
+function SunnyAnimation() {
+  const rays = useMemo(() => {
+    return Array.from({ length: 5 }, (_, i) => ({
+      width: `${200 + Math.random() * 400}px`,
+      height: `${200 + Math.random() * 400}px`,
+      top: `${-10 + Math.random() * 30}%`,
+      right: `${-10 + Math.random() * 30}%`,
+      background: `radial-gradient(circle, rgba(255,255,200,0.25) 0%, transparent 70%)`,
+      animationDuration: `${4 + Math.random() * 4}s`,
+      animationDelay: `${Math.random() * 3}s`,
+    }));
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      {rays.map((s, i) => (
+        <div key={i} className="sun-ray" style={s} />
+      ))}
+    </div>
+  );
+}
+
+function CloudAnimation() {
+  const clouds = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => ({
+      width: `${100 + Math.random() * 200}px`,
+      height: `${40 + Math.random() * 60}px`,
+      top: `${5 + Math.random() * 40}%`,
+      animationDuration: `${20 + Math.random() * 30}s`,
+      animationDelay: `${Math.random() * 20}s`,
+    }));
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      {clouds.map((s, i) => (
+        <div key={i} className="cloud-shape" style={s} />
+      ))}
+    </div>
+  );
+}
+
+function ThunderstormAnimation() {
+  const [flash, setFlash] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Math.random() > 0.6) {
+        setFlash(true);
+        setTimeout(() => setFlash(false), 150);
+        setTimeout(() => {
+          setFlash(true);
+          setTimeout(() => setFlash(false), 80);
+        }, 200);
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <>
+      <RainAnimation />
+      {flash && (
+        <div className="fixed inset-0 pointer-events-none z-[5]"
+          style={{ background: 'rgba(255,255,255,0.15)' }} />
+      )}
+    </>
+  );
+}
+
+function WeatherAnimation({ type }) {
+  switch (type) {
+    case 'rain': return <RainAnimation />;
+    case 'snow': return <SnowAnimation />;
+    case 'sunny': return <SunnyAnimation />;
+    case 'cloudy': return <CloudAnimation />;
+    case 'thunderstorm': return <ThunderstormAnimation />;
+    case 'clear-night': return <SunnyAnimation />;
+    case 'mist': return <CloudAnimation />;
+    default: return null;
+  }
+}
+
+// ========================================
+// Design System Components
+// ========================================
+function SearchBar({ value, onChange, onSearch, suggestions, onSelectSuggestion, showSuggestions }) {
+  const inputRef = useRef(null);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      onSearch();
+    }
+  };
+
+  return (
+    <div className="relative w-full max-w-lg mx-auto">
+      <div className="glass rounded-2xl flex items-center px-4 py-3 gap-3 shadow-lg">
+        <svg className="w-5 h-5 text-white/70 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={onChange}
+          onKeyDown={handleKeyDown}
+          placeholder="도시 검색 (예: 서울, Tokyo, London)"
+          className="flex-1 bg-transparent outline-none text-white placeholder-white/50 text-base"
+          autoComplete="off"
+        />
+        <button
+          onClick={onSearch}
+          className="bg-white/20 hover:bg-white/30 text-white px-4 py-1.5 rounded-xl
+                     text-sm font-medium transition-all duration-200 active:scale-95"
+        >
+          검색
+        </button>
+      </div>
+
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-2 glass rounded-xl overflow-hidden z-50 shadow-xl">
+          {suggestions.map((city, i) => (
+            <button
+              key={i}
+              onClick={() => onSelectSuggestion(city)}
+              className="w-full text-left px-4 py-2.5 text-white/90 hover:bg-white/20
+                         transition-colors text-sm border-b border-white/10 last:border-0"
+            >
+              {city}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecentChips({ cities, onSelect }) {
+  if (!cities.length) return null;
+  return (
+    <div className="flex flex-wrap justify-center gap-2 mt-3">
+      {cities.map((city, i) => (
+        <button
+          key={i}
+          onClick={() => onSelect(city)}
+          className="glass px-3 py-1 rounded-full text-white/80 text-xs font-medium
+                     hover:bg-white/25 transition-all duration-200 active:scale-95 flex items-center gap-1"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {city}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TempToggle({ unit, onToggle }) {
+  return (
+    <button
+      onClick={onToggle}
+      className="glass px-3 py-1.5 rounded-xl text-white text-sm font-semibold
+                 hover:bg-white/25 transition-all duration-200 active:scale-95"
+    >
+      {unit === 'C' ? '°C' : '°F'} &#8594; {unit === 'C' ? '°F' : '°C'}
+    </button>
+  );
+}
+
+function LoadingSpinner() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4">
+      <div className="spinner" />
+      <p className="text-white/70 text-sm">날씨 정보를 불러오는 중...</p>
+    </div>
+  );
+}
+
+function ErrorMessage({ message, onRetry }) {
+  return (
+    <div className="glass rounded-2xl p-8 text-center max-w-md mx-auto fade-in-up">
+      <div className="text-5xl mb-4">😔</div>
+      <p className="text-white text-lg font-medium mb-2">오류가 발생했습니다</p>
+      <p className="text-white/70 text-sm mb-4">{message}</p>
+      {onRetry && (
+        <button onClick={onRetry}
+          className="bg-white/20 hover:bg-white/30 text-white px-5 py-2 rounded-xl
+                     text-sm font-medium transition-all">
+          다시 시도
+        </button>
+      )}
+    </div>
+  );
+}
+
+function InfoItem({ icon, label, value }) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+      <span className="text-2xl">{icon}</span>
+      <div>
+        <p className="text-white/50 text-xs">{label}</p>
+        <p className="text-white font-semibold text-sm">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// Current Weather Card
+// ========================================
+function CurrentWeatherCard({ data, unit }) {
+  const { name, sys, main, weather, wind, visibility, dt, timezone, _koreanName } = data;
+  const w = weather[0];
+  const localTime = getLocalTime(timezone);
+  const localDate = getLocalDate(timezone);
+  const displayName = _koreanName ? `${_koreanName} (${name})` : name;
+
+  return (
+    <div className="glass rounded-3xl p-6 md:p-8 max-w-2xl mx-auto fade-in-up shadow-2xl">
+      {/* Header: City & Time */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-white text-2xl md:text-3xl font-bold">{displayName}</h2>
+          {sys.country && (
+            <img
+              src={getFlagUrl(sys.country)}
+              alt={sys.country}
+              className="h-5 rounded shadow"
+              onError={(e) => e.target.style.display = 'none'}
+            />
+          )}
+        </div>
+        <div className="text-right">
+          <p className="text-white text-xl font-light">{localTime}</p>
+        </div>
+      </div>
+      <p className="text-white/60 text-sm mb-6">{localDate}</p>
+
+      {/* Main Weather */}
+      <div className="flex flex-col sm:flex-row items-center gap-2 mb-6">
+        <img
+          src={getWeatherIconUrl(w.icon)}
+          alt={w.description}
+          className="w-32 h-32 md:w-40 md:h-40 drop-shadow-lg"
+        />
+        <div className="text-center sm:text-left">
+          <p className="text-white text-6xl md:text-7xl font-bold leading-none">
+            {formatTemp(main.temp, unit)}<span className="text-3xl md:text-4xl font-light align-top">°{unit}</span>
+          </p>
+          <p className="text-white/80 text-lg mt-1 capitalize">{w.description}</p>
+          <p className="text-white/50 text-sm mt-0.5">
+            체감 온도 {formatTemp(main.feels_like, unit)}°{unit}
+          </p>
+        </div>
+      </div>
+
+      {/* Detail Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        <InfoItem icon="💧" label="습도" value={`${main.humidity}%`} />
+        <InfoItem icon="💨" label="풍속" value={`${wind.speed} m/s ${wind.deg != null ? windDirection(wind.deg) : ''}`} />
+        <InfoItem icon="🌡️" label="기압" value={`${main.pressure} hPa`} />
+        <InfoItem icon="👁️" label="가시거리" value={`${(visibility / 1000).toFixed(1)} km`} />
+        <InfoItem icon="🌅" label="일출" value={unixToTime(sys.sunrise, timezone)} />
+        <InfoItem icon="🌇" label="일몰" value={unixToTime(sys.sunset, timezone)} />
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// 5-Day Forecast
+// ========================================
+function ForecastCard({ item, unit }) {
+  const date = new Date(item.dt * 1000);
+  const dayName = KOREAN_DAYS[date.getDay()];
+  const monthDay = `${date.getMonth() + 1}/${date.getDate()}`;
+  const w = item.weather[0];
+
+  return (
+    <div className="glass rounded-2xl p-4 min-w-[130px] flex flex-col items-center gap-1
+                    hover:bg-white/20 transition-all duration-200 shrink-0">
+      <p className="text-white/60 text-xs">{monthDay}</p>
+      <p className="text-white font-bold text-sm">{dayName}요일</p>
+      <img src={getWeatherIconUrl(w.icon)} alt={w.description} className="w-14 h-14" />
+      <p className="text-white text-xs capitalize">{w.description}</p>
+      <div className="flex gap-2 mt-1">
+        <span className="text-white font-bold text-sm">{formatTemp(item.high, unit)}°</span>
+        <span className="text-white/50 text-sm">{formatTemp(item.low, unit)}°</span>
+      </div>
+    </div>
+  );
+}
+
+function ForecastSection({ forecastData, unit }) {
+  if (!forecastData || !forecastData.length) return null;
+
+  // Group by day and get min/max
+  const dailyMap = {};
+  forecastData.forEach(item => {
+    const dateKey = new Date(item.dt * 1000).toDateString();
+    const today = new Date().toDateString();
+    if (dateKey === today) return; // skip today
+
+    if (!dailyMap[dateKey]) {
+      dailyMap[dateKey] = {
+        dt: item.dt,
+        weather: item.weather,
+        high: item.main.temp_max,
+        low: item.main.temp_min,
+      };
+    } else {
+      dailyMap[dateKey].high = Math.max(dailyMap[dateKey].high, item.main.temp_max);
+      dailyMap[dateKey].low = Math.min(dailyMap[dateKey].low, item.main.temp_min);
+      // Pick midday icon if available
+      const hour = new Date(item.dt * 1000).getHours();
+      if (hour >= 11 && hour <= 14) {
+        dailyMap[dateKey].weather = item.weather;
+      }
+    }
+  });
+
+  const days = Object.values(dailyMap).slice(0, 5);
+
+  return (
+    <div className="max-w-2xl mx-auto mt-6 fade-in-up" style={{ animationDelay: '0.2s' }}>
+      <h3 className="text-white/80 text-base font-semibold mb-3 px-1">
+        📅 5일 예보
+      </h3>
+      <div className="flex gap-3 overflow-x-auto pb-2 forecast-scroll">
+        {days.map((day, i) => (
+          <ForecastCard key={i} item={day} unit={unit} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// Empty State (Initial)
+// ========================================
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 fade-in-up">
+      <div className="text-8xl mb-6 animate-bounce" style={{ animationDuration: '3s' }}>🌤️</div>
+      <h2 className="text-white text-2xl font-bold mb-2">WeatherNow</h2>
+      <p className="text-white/60 text-sm text-center max-w-xs">
+        도시 이름을 입력하면 실시간 날씨 정보를 확인할 수 있습니다
+      </p>
+      <div className="flex flex-wrap justify-center gap-2 mt-8">
+        {['서울', 'Tokyo', 'London', 'New York', 'Paris'].map(city => (
+          <span key={city} className="glass px-3 py-1 rounded-full text-white/40 text-xs">
+            {city}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// App Component
+// ========================================
+function App() {
+  const [query, setQuery] = useState('');
+  const [weather, setWeather] = useState(null);
+  const [forecast, setForecast] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [unit, setUnit] = useState('C');
+  const [recentCities, setRecentCities] = useState(getRecentCities());
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [theme, setTheme] = useState({ bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', type: 'default' });
+
+  const fetchWeather = useCallback(async (city) => {
+    if (!city.trim()) return;
+    setLoading(true);
+    setError(null);
+    setShowSuggestions(false);
+
+    const originalInput = city.trim();
+    const translatedCity = translateCity(originalInput);
+
+    try {
+      const [weatherRes, forecastRes] = await Promise.all([
+        fetch(`${WEATHER_URL}?q=${encodeURIComponent(translatedCity)}&appid=${API_KEY}&units=metric&lang=kr`),
+        fetch(`${FORECAST_URL}?q=${encodeURIComponent(translatedCity)}&appid=${API_KEY}&units=metric&lang=kr`),
+      ]);
+
+      if (!weatherRes.ok) {
+        if (weatherRes.status === 404) throw new Error(`'${originalInput}' 도시를 찾을 수 없습니다. 올바른 도시 이름을 입력해주세요.`);
+        throw new Error('날씨 정보를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.');
+      }
+
+      const weatherData = await weatherRes.json();
+      const forecastData = await forecastRes.json();
+
+      // 한글 도시명이 있으면 koreanName 필드 추가
+      const koreanName = ENGLISH_TO_KOREAN[weatherData.name.toLowerCase()] || null;
+      weatherData._koreanName = koreanName;
+      weatherData._userInput = originalInput;
+
+      setWeather(weatherData);
+      setForecast(forecastData.list || []);
+
+      // 검색창에 한글명 있으면 한글로, 없으면 영문으로 표시
+      const displayName = koreanName || weatherData.name;
+      setQuery(displayName);
+
+      // Update theme
+      const iconCode = weatherData.weather[0].icon;
+      const weatherId = weatherData.weather[0].id;
+      setTheme(getTheme(iconCode, weatherId));
+
+      // Save to recent (한글명 우선 저장)
+      saveRecentCity(displayName);
+      setRecentCities(getRecentCities());
+    } catch (err) {
+      setError(err.message);
+      setWeather(null);
+      setForecast(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setQuery(val);
+
+    if (val.length >= 1) {
+      const filtered = POPULAR_CITIES.filter(c =>
+        c.toLowerCase().includes(val.toLowerCase())
+      ).slice(0, 6);
+      setSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSearch = () => {
+    if (query.trim()) {
+      fetchWeather(query.trim());
+    }
+  };
+
+  const handleSelectSuggestion = (city) => {
+    setQuery(city);
+    setShowSuggestions(false);
+    fetchWeather(city);
+  };
+
+  const handleSelectRecent = (city) => {
+    setQuery(city);
+    fetchWeather(city);
+  };
+
+  const toggleUnit = () => {
+    setUnit(prev => prev === 'C' ? 'F' : 'C');
+  };
+
+  // Close suggestions on click outside
+  useEffect(() => {
+    const handler = () => setShowSuggestions(false);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, []);
+
+  return (
+    <div
+      className="min-h-screen bg-transition relative overflow-hidden"
+      style={{ background: theme.bg }}
+    >
+      {/* Weather animation */}
+      <WeatherAnimation type={theme.type} />
+
+      {/* Content */}
+      <div className="relative z-10 max-w-3xl mx-auto px-4 py-8 md:py-12">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-white text-3xl md:text-4xl font-bold mb-1 tracking-tight">
+            WeatherNow
+          </h1>
+          <p className="text-white/50 text-sm">실시간 날씨 정보</p>
+        </div>
+
+        {/* Search */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <SearchBar
+            value={query}
+            onChange={handleInputChange}
+            onSearch={handleSearch}
+            suggestions={suggestions}
+            onSelectSuggestion={handleSelectSuggestion}
+            showSuggestions={showSuggestions}
+          />
+        </div>
+
+        {/* Recent Searches */}
+        <RecentChips cities={recentCities} onSelect={handleSelectRecent} />
+
+        {/* Temp Toggle - show when weather loaded */}
+        {weather && (
+          <div className="flex justify-center mt-4">
+            <TempToggle unit={unit} onToggle={toggleUnit} />
+          </div>
+        )}
+
+        {/* Main Content */}
+        <div className="mt-8">
+          {loading && <LoadingSpinner />}
+
+          {!loading && error && (
+            <ErrorMessage message={error} onRetry={() => fetchWeather(query)} />
+          )}
+
+          {!loading && !error && !weather && <EmptyState />}
+
+          {!loading && !error && weather && (
+            <>
+              <CurrentWeatherCard data={weather} unit={unit} />
+              <ForecastSection forecastData={forecast} unit={unit} />
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-12 text-white/30 text-xs">
+          Powered by OpenWeatherMap
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// Rendering
+// ========================================
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
