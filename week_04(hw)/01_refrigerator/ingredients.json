@@ -1,0 +1,103 @@
+{
+  "refrigerator": {
+    "lastUpdated": "2026-04-22",
+    "ingredients": [
+      {
+        "name": "삼겹살",
+        "category": "육류",
+        "quantity": "500g",
+        "storage": "냉동"
+      },
+      {
+        "name": "닭가슴살",
+        "category": "육류",
+        "quantity": "300g",
+        "storage": "냉동"
+      },
+      {
+        "name": "계란",
+        "category": "유제품",
+        "quantity": "10개",
+        "storage": "냉장"
+      },
+      {
+        "name": "우유",
+        "category": "유제품",
+        "quantity": "1L",
+        "storage": "냉장"
+      },
+      {
+        "name": "두부",
+        "category": "콩류",
+        "quantity": "1모",
+        "storage": "냉장"
+      },
+      {
+        "name": "양파",
+        "category": "채소",
+        "quantity": "3개",
+        "storage": "냉장"
+      },
+      {
+        "name": "대파",
+        "category": "채소",
+        "quantity": "2대",
+        "storage": "냉장"
+      },
+      {
+        "name": "감자",
+        "category": "채소",
+        "quantity": "4개",
+        "storage": "냉장"
+      },
+      {
+        "name": "당근",
+        "category": "채소",
+        "quantity": "2개",
+        "storage": "냉장"
+      },
+      {
+        "name": "시금치",
+        "category": "채소",
+        "quantity": "1봉",
+        "storage": "냉장"
+      },
+      {
+        "name": "김치",
+        "category": "반찬/절임",
+        "quantity": "1통",
+        "storage": "냉장"
+      },
+      {
+        "name": "고추장",
+        "category": "양념",
+        "quantity": "1통",
+        "storage": "냉장"
+      },
+      {
+        "name": "된장",
+        "category": "양념",
+        "quantity": "1통",
+        "storage": "냉장"
+      },
+      {
+        "name": "새우",
+        "category": "해산물",
+        "quantity": "200g",
+        "storage": "냉동"
+      },
+      {
+        "name": "밥",
+        "category": "곡류",
+        "quantity": "3공기",
+        "storage": "냉동"
+      },
+      {
+        "name": "브로콜리",
+        "category": "채소",
+        "quantity": "1송이",
+        "storage": "냉장"
+      }
+    ]
+  }
+}
