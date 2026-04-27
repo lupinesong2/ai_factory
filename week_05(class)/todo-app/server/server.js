@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const CLIENT_DIR = path.resolve(__dirname, '..', 'client');
 const PORT = Number(process.env.PORT) || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -19,7 +20,7 @@ const pool = new pg.Pool({
 
 const app = express();
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(CLIENT_DIR));
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
