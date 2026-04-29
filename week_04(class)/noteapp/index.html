@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>나의 메모장</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>나의 메모장</h1>
+    </header>
+
+    <div class="container">
+      <!-- 왼쪽: 메모 목록 -->
+      <aside class="sidebar">
+        <button id="btn-new" class="btn-new">+ 새 메모</button>
+        <ul id="note-list" class="note-list"></ul>
+      </aside>
+
+      <!-- 오른쪽: 편집 영역 -->
+      <main class="editor">
+        <div id="editor-placeholder" class="placeholder">메모를 선택하거나 새 메모를 만드세요</div>
+        <div id="editor-form" class="editor-form" style="display:none;">
+          <input type="text" id="note-title" placeholder="제목을 입력하세요">
+          <textarea id="note-content" placeholder="내용을 입력하세요"></textarea>
+          <div class="editor-actions">
+            <button id="btn-save" class="btn save">저장</button>
+            <button id="btn-delete" class="btn delete">삭제</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

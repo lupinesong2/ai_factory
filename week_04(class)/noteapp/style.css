@@ -1,0 +1,201 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f0f2f5;
+  color: #333;
+  height: 100vh;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+header {
+  background: #4a90d9;
+  color: white;
+  padding: 16px 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 사이드바 */
+.sidebar {
+  width: 280px;
+  background: white;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.btn-new {
+  margin: 16px;
+  padding: 10px;
+  background: #4a90d9;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-new:hover {
+  background: #357abd;
+}
+
+.note-list {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.note-list li {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.note-list li:hover {
+  background: #f5f7fa;
+}
+
+.note-list li.active {
+  background: #e8f0fe;
+  border-left: 3px solid #4a90d9;
+}
+
+.note-list li .note-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-list li .note-item-date {
+  font-size: 11px;
+  color: #999;
+}
+
+/* 편집 영역 */
+.editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 16px;
+  color: #aaa;
+}
+
+.editor-form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 16px;
+}
+
+#note-title {
+  font-size: 20px;
+  font-weight: 600;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#note-title:focus {
+  border-color: #4a90d9;
+}
+
+#note-content {
+  flex: 1;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+#note-content:focus {
+  border-color: #4a90d9;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn.save {
+  background: #4a90d9;
+  color: white;
+}
+
+.btn.save:hover {
+  background: #357abd;
+}
+
+.btn.delete {
+  background: #e74c3c;
+  color: white;
+}
+
+.btn.delete:hover {
+  background: #c0392b;
+}
+
+/* 반응형 */
+@media (max-width: 640px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+  }
+}

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Tester</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: { 1: '#111827', 2: '#1f2937', 3: '#374151' },
+            accent: '#3b82f6',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; background: #111827; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeIn 0.25s ease-out; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useCallback, useRef, useEffect } = React;
+
+    const METHOD_COLORS = {
+      GET: 'bg-emerald-600', POST: 'bg-blue-600', PUT: 'bg-amber-600', DELETE: 'bg-red-600',
+    };
+    const METHOD_TEXT = {
+      GET: 'text-emerald-400', POST: 'text-blue-400', PUT: 'text-amber-400', DELETE: 'text-red-400',
+    };
+
+    // ── API 정의 (카테고리별) ──
+    const API_CATEGORIES = [
+      {
+        name: '기본', icon: '⚡',
+        apis: [
+          { method: 'GET', path: '/api/hello', title: 'Hello', desc: '기본 인사 응답' },
+          { method: 'GET', path: '/api/time', title: '서버 시간', desc: '현재 서버 시간' },
+          { method: 'POST', path: '/api/echo', title: 'Echo', desc: '보낸 데이터 그대로 반환',
+            defaultBody: '{"message": "안녕하세요!"}' },
+        ]
+      },
+      {
+        name: '사용자', icon: '👤',
+        apis: [
+          { method: 'GET', path: '/api/users', title: '목록 조회', desc: '전체 사용자 목록' },
+          { method: 'POST', path: '/api/users', title: '추가', desc: '새 사용자 등록',
+            fields: [{ key: 'name', placeholder: '이름' }, { key: 'email', placeholder: '이메일' }] },
+          { method: 'DELETE', path: '/api/users/:id', title: '삭제', desc: 'ID로 삭제',
+            paramFields: [{ key: 'id', placeholder: 'ID (숫자)' }] },
+        ]
+      },
+      {
+        name: '할 일', icon: '✅',
+        apis: [
+          { method: 'GET', path: '/api/todos', title: '목록 조회', desc: '전체 할일 목록' },
+          { method: 'POST', path: '/api/todos', title: '추가', desc: '새 할일 등록',
+            fields: [{ key: 'title', placeholder: '할일 제목' }] },
+          { method: 'PUT', path: '/api/todos/:id', title: '수정', desc: '할일 상태 변경',
+            paramFields: [{ key: 'id', placeholder: 'ID' }],
+            fields: [{ key: 'title', placeholder: '제목 (선택)' }, { key: 'completed', placeholder: 'true / false', type: 'boolean' }] },
+          { method: 'DELETE', path: '/api/todos/:id', title: '삭제', desc: 'ID로 삭제',
+            paramFields: [{ key: 'id', placeholder: 'ID' }] },
+        ]
+      },
+      {
+        name: '메모', icon: '📝',
+        apis: [
+          { method: 'GET', path: '/api/notes', title: '목록 조회', desc: '전체 메모 목록' },
+          { method: 'GET', path: '/api/notes/:id', title: '상세 조회', desc: 'ID로 메모 조회',
+            paramFields: [{ key: 'id', placeholder: 'ID' }] },
+          { method: 'POST', path: '/api/notes', title: '작성', desc: '새 메모 작성',
+            fields: [{ key: 'title', placeholder: '제목' }, { key: 'content', placeholder: '내용' }] },
+          { method: 'PUT', path: '/api/notes/:id', title: '수정', desc: '메모 내용 수정',
+            paramFields: [{ key: 'id', placeholder: 'ID' }],
+            fields: [{ key: 'title', placeholder: '제목 (선택)' }, { key: 'content', placeholder: '내용 (선택)' }] },
+          { method: 'DELETE', path: '/api/notes/:id', title: '삭제', desc: 'ID로 삭제',
+            paramFields: [{ key: 'id', placeholder: 'ID' }] },
+        ]
+      },
+      {
+        name: '유틸리티', icon: '🔧',
+        apis: [
+          { method: 'GET', path: '/api/search', title: '통합 검색', desc: 'users, todos, notes 검색',
+            queryFields: [{ key: 'q', placeholder: '검색어' }] },
+          { method: 'GET', path: '/api/stats', title: '통계', desc: '전체 데이터 통계' },
+          { method: 'GET', path: '/api/random/quote', title: '랜덤 명언', desc: '한국어 명언' },
+          { method: 'GET', path: '/api/random/number', title: '랜덤 숫자', desc: '범위 내 숫자 생성',
+            queryFields: [{ key: 'min', placeholder: '최소값 (기본 1)' }, { key: 'max', placeholder: '최대값 (기본 100)' }] },
+          { method: 'POST', path: '/api/calc', title: '계산기', desc: '사칙연산',
+            fields: [{ key: 'a', placeholder: '숫자 A', type: 'number' }, { key: 'b', placeholder: '숫자 B', type: 'number' }, { key: 'op', placeholder: 'add / subtract / multiply / divide' }] },
+        ]
+      },
+    ];
+
+    // ── Hook: API 호출 ──
+    function useApiCall() {
+      const [response, setResponse] = useState(null);
+      const [loading, setLoading] = useState(false);
+
+      const call = useCallback(async (method, path, body = null) => {
+        setLoading(true);
+        setResponse(null);
+        const reqInfo = { method, url: path, body };
+        const start = performance.now();
+        try {
+          const opts = { method, headers: {} };
+          if (body && (method === 'POST' || method === 'PUT')) {
+            opts.headers['Content-Type'] = 'application/json';
+            opts.body = typeof body === 'string' ? body : JSON.stringify(body);
+          }
+          const res = await fetch(path, opts);
+          const elapsed = Math.round(performance.now() - start);
+          const ct = res.headers.get('content-type') || '';
+          const data = ct.includes('json') ? await res.json() : await res.text();
+          setResponse({ status: res.status, time: elapsed, body: data, request: reqInfo });
+        } catch (err) {
+          const elapsed = Math.round(performance.now() - start);
+          setResponse({ status: null, time: elapsed, body: null, request: reqInfo, error: err.message });
+        } finally {
+          setLoading(false);
+        }
+      }, []);
+
+      return { response, loading, call };
+    }
+
+    // ── 컴포넌트: MethodBadge ──
+    function MethodBadge({ method, size = 'sm' }) {
+      const s = size === 'sm' ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-0.5';
+      return (
+        <span className={`${METHOD_COLORS[method]} text-white font-bold rounded mono ${s}`}>
+          {method}
+        </span>
+      );
+    }
+
+    // ── 컴포넌트: API 아이템 (왼쪽 패널) ──
+    function ApiItem({ api, onSend, isActive }) {
+      const [fields, setFields] = useState({});
+      const [bodyText, setBodyText] = useState(api.defaultBody || '');
+
+      const buildPath = () => {
+        let p = api.path;
+        if (api.paramFields) {
+          api.paramFields.forEach(f => { p = p.replace(`:${f.key}`, fields[f.key] || ''); });
+        }
+        if (api.queryFields) {
+          const params = api.queryFields
+            .filter(f => fields[f.key])
+            .map(f => `${f.key}=${encodeURIComponent(fields[f.key])}`)
+            .join('&');
+          if (params) p += `?${params}`;
+        }
+        return p;
+      };
+
+      const buildBody = () => {
+        if (api.defaultBody) {
+          try { return JSON.parse(bodyText); } catch { return bodyText; }
+        }
+        if (!api.fields) return null;
+        const obj = {};
+        api.fields.forEach(f => {
+          const v = fields[f.key];
+          if (v === undefined || v === '') return;
+          if (f.type === 'number') obj[f.key] = Number(v);
+          else if (f.type === 'boolean') obj[f.key] = v === 'true';
+          else obj[f.key] = v;
+        });
+        return Object.keys(obj).length ? obj : null;
+      };
+
+      const handleSend = () => {
+        onSend(api.method, buildPath(), buildBody());
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      };
+
+      const inputFields = [...(api.paramFields || []), ...(api.queryFields || []), ...(api.fields || [])];
+
+      return (
+        <div className={`group rounded-lg border transition-all duration-150 ${isActive ? 'border-accent bg-surface-2/80' : 'border-transparent hover:border-gray-700 hover:bg-surface-2/50'}`}>
+          {/* 헤더: 메서드 + 경로 + 설명 + Send 버튼 */}
+          <div className="flex items-center gap-2 px-3 py-2.5">
+            <MethodBadge method={api.method} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2">
+                <span className="text-white text-sm font-medium">{api.title}</span>
+                <span className="text-gray-500 text-xs mono truncate">{api.path}</span>
+              </div>
+              <p className="text-gray-500 text-xs mt-0.5">{api.desc}</p>
+            </div>
+            <button onClick={handleSend}
+              className="shrink-0 px-3 py-1 text-xs font-semibold rounded-md bg-accent hover:bg-blue-500 text-white transition-colors">
+              Send
+            </button>
+          </div>
+
+          {/* 입력 필드 (있을 때만) */}
+          {(inputFields.length > 0 || api.defaultBody) && (
+            <div className="px-3 pb-2.5 flex flex-wrap gap-2">
+              {inputFields.map(f => (
+                <input key={f.key}
+                  className="bg-surface-1 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 mono placeholder-gray-600 focus:outline-none focus:border-accent w-28 flex-shrink-0"
+                  placeholder={f.placeholder}
+                  value={fields[f.key] || ''}
+                  onChange={e => setFields(prev => ({...prev, [f.key]: e.target.value}))}
+                  onKeyDown={handleKeyDown}
+                />
+              ))}
+              {api.defaultBody && (
+                <input
+                  className="bg-surface-1 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 mono placeholder-gray-600 focus:outline-none focus:border-accent flex-1 min-w-[200px]"
+                  placeholder='JSON body'
+                  value={bodyText}
+                  onChange={e => setBodyText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ── 컴포넌트: 카테고리 그룹 ──
+    function CategoryGroup({ category, onSend, activeApi }) {
+      const [open, setOpen] = useState(true);
+      return (
+        <div className="mb-1">
+          <button onClick={() => setOpen(!open)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors">
+            <span>{category.icon}</span>
+            <span>{category.name}</span>
+            <span className="text-gray-600 text-xs font-normal ml-1">({category.apis.length})</span>
+            <svg className={`w-3.5 h-3.5 ml-auto text-gray-500 transition-transform ${open ? 'rotate-0' : '-rotate-90'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {open && (
+            <div className="space-y-0.5 ml-1">
+              {category.apis.map((api, i) => (
+                <ApiItem key={i} api={api} onSend={onSend}
+                  isActive={activeApi === `${api.method} ${api.path}`} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ── 컴포넌트: 커스텀 요청 ──
+    function CustomRequest({ onSend }) {
+      const [method, setMethod] = useState('GET');
+      const [path, setPath] = useState('/api/');
+      const [body, setBody] = useState('');
+      const showBody = method === 'POST' || method === 'PUT';
+
+      const handleSend = () => {
+        let parsed = null;
+        if (showBody && body.trim()) {
+          try { parsed = JSON.parse(body); } catch { parsed = body; }
+        }
+        onSend(method, path, parsed);
+      };
+
+      return (
+        <div className="border-t border-gray-800 mt-2 pt-3 px-3 pb-3">
+          <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Custom Request</p>
+          <div className="flex gap-2 mb-2">
+            <select value={method} onChange={e => setMethod(e.target.value)}
+              className="bg-surface-1 border border-gray-700 rounded px-2 py-1.5 text-xs text-gray-300 mono focus:outline-none focus:border-accent">
+              {['GET','POST','PUT','DELETE'].map(m => <option key={m}>{m}</option>)}
+            </select>
+            <input value={path} onChange={e => setPath(e.target.value)}
+              className="bg-surface-1 border border-gray-700 rounded px-2 py-1.5 text-xs text-gray-300 mono flex-1 focus:outline-none focus:border-accent placeholder-gray-600"
+              placeholder="/api/endpoint"
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+            />
+            <button onClick={handleSend}
+              className="px-3 py-1.5 text-xs font-semibold rounded bg-accent hover:bg-blue-500 text-white transition-colors">
+              Send
+            </button>
+          </div>
+          {showBody && (
+            <textarea value={body} onChange={e => setBody(e.target.value)}
+              rows={3} placeholder='{"key": "value"}'
+              className="w-full bg-surface-1 border border-gray-700 rounded px-2 py-1.5 text-xs text-gray-300 mono focus:outline-none focus:border-accent placeholder-gray-600 resize-y" />
+          )}
+        </div>
+      );
+    }
+
+    // ── 컴포넌트: 응답 패널 (오른쪽) ──
+    function ResponsePanel({ response, loading }) {
+      if (!response && !loading) {
+        return (
+          <div className="flex items-center justify-center h-full text-gray-600">
+            <div className="text-center">
+              <svg className="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-sm">API를 호출하면<br/>응답이 여기에 표시됩니다</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (loading) {
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="flex gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{animationDelay:'0ms'}}></div>
+              <div className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{animationDelay:'150ms'}}></div>
+              <div className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{animationDelay:'300ms'}}></div>
+            </div>
+          </div>
+        );
+      }
+
+      const { status, time, body, request, error } = response;
+      const isOk = status >= 200 && status < 300;
+      const statusColor = !status ? 'text-red-400' : isOk ? 'text-emerald-400' : status < 500 ? 'text-amber-400' : 'text-red-400';
+      const statusBg = !status ? 'bg-red-500/10' : isOk ? 'bg-emerald-500/10' : status < 500 ? 'bg-amber-500/10' : 'bg-red-500/10';
+
+      let formatted = '';
+      try { formatted = typeof body === 'string' ? body : JSON.stringify(body, null, 2); } catch { formatted = String(body); }
+
+      return (
+        <div className="animate-in flex flex-col h-full">
+          {/* 상단: 상태 + 시간 */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800">
+            <div className={`${statusBg} ${statusColor} font-bold mono text-sm px-2.5 py-1 rounded-md`}>
+              {status || 'ERR'}
+            </div>
+            <div className="flex items-center gap-2">
+              <MethodBadge method={request.method} size="md" />
+              <span className="text-gray-400 text-sm mono truncate">{request.url}</span>
+            </div>
+            {time != null && (
+              <span className="ml-auto text-gray-500 text-xs mono shrink-0">{time}ms</span>
+            )}
+          </div>
+
+          {/* Request Body (있을 때만) */}
+          {request.body && (
+            <div className="px-4 py-2 border-b border-gray-800/50">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Request Body</p>
+              <pre className="text-xs mono text-gray-400 whitespace-pre-wrap break-all">{
+                typeof request.body === 'string' ? request.body : JSON.stringify(request.body, null, 2)
+              }</pre>
+            </div>
+          )}
+
+          {/* Response Body */}
+          <div className="flex-1 overflow-auto scrollbar-thin">
+            <div className="px-4 py-2">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Response Body</p>
+            </div>
+            <div className="px-4 pb-4">
+              {error ? (
+                <p className="text-red-400 text-sm mono">{error}</p>
+              ) : (
+                <pre className="text-sm mono text-gray-300 whitespace-pre-wrap break-all leading-relaxed">{formatted}</pre>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── App ──
+    function App() {
+      const { response, loading, call } = useApiCall();
+      const [activeApi, setActiveApi] = useState(null);
+
+      const handleSend = (method, path, body) => {
+        setActiveApi(`${method} ${path}`);
+        call(method, path, body);
+      };
+
+      return (
+        <div className="h-screen flex flex-col bg-surface-1 text-gray-100">
+          {/* 헤더 */}
+          <header className="flex items-center gap-3 px-5 py-3 border-b border-gray-800 bg-surface-2/50 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-white leading-tight">API Tester</h1>
+              <p className="text-xs text-gray-500">간단한 서버 API 호출 테스트</p>
+            </div>
+            <div className="ml-auto flex items-center gap-2 text-xs text-gray-500 mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              localhost:3000
+            </div>
+          </header>
+
+          {/* 메인: 2-column */}
+          <div className="flex flex-1 min-h-0">
+            {/* 왼쪽: API 목록 */}
+            <div className="w-[420px] shrink-0 border-r border-gray-800 flex flex-col bg-surface-2/30">
+              <div className="flex-1 overflow-y-auto scrollbar-thin py-2">
+                {API_CATEGORIES.map((cat, i) => (
+                  <CategoryGroup key={i} category={cat} onSend={handleSend} activeApi={activeApi} />
+                ))}
+              </div>
+              <CustomRequest onSend={handleSend} />
+            </div>
+
+            {/* 오른쪽: 응답 */}
+            <div className="flex-1 min-w-0 flex flex-col">
+              <ResponsePanel response={response} loading={loading} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

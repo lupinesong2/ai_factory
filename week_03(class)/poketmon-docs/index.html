@@ -67,6 +67,7 @@
   // ========================================
   const POKEAPI_BASE = 'https://pokeapi.co/api/v2';
   const ARTWORK_BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork';
+  const PIXEL_GIF_BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated';
   const POKEMON_PER_PAGE = 20;
   const MAX_POKEMON = 151; // 1세대
 
@@ -197,7 +198,9 @@
                 src={pokemon.image}
                 alt={pokemon.nameKo}
                 className="relative w-40 h-40 object-contain drop-shadow-lg animate-float"
+                style={{ imageRendering: 'pixelated' }}
                 loading="lazy"
+                onError={(e) => { e.target.src = pokemon.imageFallback; e.target.style.imageRendering = 'auto'; }}
               />
             </div>
           </div>
@@ -291,7 +294,8 @@
               nameEn: pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1),
               types,
               description,
-              image: `${ARTWORK_BASE}/${id}.png`,
+              image: `${PIXEL_GIF_BASE}/${id}.gif`,
+              imageFallback: `${ARTWORK_BASE}/${id}.png`,
             };
           });
 

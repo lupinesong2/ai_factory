@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "server.js", "use": "@vercel/node" },
+    { "src": "style.css", "use": "@vercel/static" },
+    { "src": "app.js", "use": "@vercel/static" },
+    { "src": "index.html", "use": "@vercel/static" }
+  ],
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/server.js" },
+    { "source": "/style.css", "destination": "/style.css" },
+    { "source": "/app.js", "destination": "/app.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

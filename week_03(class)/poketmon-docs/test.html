@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>포켓몬 성격 테스트</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Noto Sans KR', sans-serif; }
+
+  @keyframes pokeball-bounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-30px) rotate(-10deg); }
+    50% { transform: translateY(0) rotate(0deg); }
+    75% { transform: translateY(-15px) rotate(10deg); }
+  }
+
+  @keyframes pokeball-shake {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(-20deg); }
+    40% { transform: rotate(20deg); }
+    60% { transform: rotate(-10deg); }
+    80% { transform: rotate(10deg); }
+  }
+
+  @keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes slideOutLeft {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(-100%); opacity: 0; }
+  }
+
+  @keyframes fadeInUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes confetti-fall {
+    0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  @keyframes sparkle {
+    0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+    50% { opacity: 1; transform: scale(1) rotate(180deg); }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+    50% { box-shadow: 0 0 40px rgba(255,255,255,0.5); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes bar-fill {
+    from { width: 0%; }
+  }
+
+  .animate-pokeball { animation: pokeball-bounce 2s ease-in-out infinite; }
+  .animate-pokeball-shake { animation: pokeball-shake 0.5s ease-in-out; }
+  .animate-slide-in { animation: slideInRight 0.5s ease-out forwards; }
+  .animate-slide-out { animation: slideOutLeft 0.4s ease-in forwards; }
+  .animate-fade-up { animation: fadeInUp 0.6s ease-out forwards; }
+  .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+  .animate-float { animation: float 3s ease-in-out infinite; }
+
+  .confetti-piece {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    top: -10px;
+    animation: confetti-fall linear forwards;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .sparkle-star {
+    position: absolute;
+    animation: sparkle 1.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .pokemon-img {
+    image-rendering: pixelated;
+  }
+
+  .bar-animate {
+    animation: bar-fill 1s ease-out forwards;
+  }
+
+  .btn-choice {
+    transition: all 0.2s ease;
+  }
+  .btn-choice:hover {
+    transform: scale(1.03);
+  }
+  .btn-choice:active {
+    transform: scale(0.97);
+  }
+</style>
+</head>
+<body class="bg-gray-900 min-h-screen">
+<div id="root"></div>
+<script type="text/babel">
+// ========================================
+// React Hooks Destructuring
+// ========================================
+const { useState, useEffect, useCallback, useMemo, useRef } = React;
+
+// ========================================
+// Data: Questions
+// ========================================
+const QUESTIONS = [
+  {
+    id: 1,
+    question: "친구들과 여행을 간다면 당신의 역할은?",
+    emoji: "✈️",
+    choices: [
+      { text: "계획을 세우고 이끄는 리더", traits: { leadership: 3, intelligence: 1 } },
+      { text: "분위기를 띄우는 에너지 넘치는 친구", traits: { social: 3, energy: 2 } },
+      { text: "모두를 챙기는 따뜻한 친구", traits: { emotion: 3, social: 1 } },
+      { text: "혼자 조용히 풍경을 즐기는 친구", traits: { intelligence: 2, emotion: 1 } },
+    ],
+  },
+  {
+    id: 2,
+    question: "갑자기 길에서 위험한 상황이 생기면?",
+    emoji: "🚨",
+    choices: [
+      { text: "바로 뛰어들어 돕는다", traits: { courage: 3, energy: 1 } },
+      { text: "침착하게 상황을 분석한다", traits: { intelligence: 3 } },
+      { text: "주변 사람들에게 도움을 요청한다", traits: { social: 2, leadership: 1 } },
+      { text: "걱정되지만 안전한 곳에서 지켜본다", traits: { emotion: 2 } },
+    ],
+  },
+  {
+    id: 3,
+    question: "주말에 가장 하고 싶은 것은?",
+    emoji: "🌅",
+    choices: [
+      { text: "친구들과 신나게 파티하기", traits: { social: 3, energy: 2 } },
+      { text: "혼자 책 읽으며 조용히 보내기", traits: { intelligence: 3, emotion: 1 } },
+      { text: "새로운 스포츠나 액티비티 도전", traits: { courage: 2, energy: 3 } },
+      { text: "가족이나 연인과 따뜻한 시간 보내기", traits: { emotion: 3, social: 1 } },
+    ],
+  },
+  {
+    id: 4,
+    question: "학교나 회사에서 그룹 프로젝트를 한다면?",
+    emoji: "💼",
+    choices: [
+      { text: "팀장을 맡아 전체를 총괄한다", traits: { leadership: 3, courage: 1 } },
+      { text: "아이디어를 내고 기획을 담당한다", traits: { intelligence: 3, leadership: 1 } },
+      { text: "팀원들 사이의 갈등을 중재한다", traits: { emotion: 2, social: 2 } },
+      { text: "묵묵히 맡은 부분을 완수한다", traits: { courage: 1, intelligence: 1, emotion: 1 } },
+    ],
+  },
+  {
+    id: 5,
+    question: "스트레스를 받을 때 당신의 해소법은?",
+    emoji: "😤",
+    choices: [
+      { text: "운동이나 산책으로 땀 흘리기", traits: { energy: 3, courage: 1 } },
+      { text: "맛있는 거 먹으며 느긋하게 쉬기", traits: { emotion: 2, energy: -1 } },
+      { text: "친구에게 전화해서 수다 떨기", traits: { social: 3, emotion: 1 } },
+      { text: "원인을 분석하고 해결책을 찾기", traits: { intelligence: 3, leadership: 1 } },
+    ],
+  },
+  {
+    id: 6,
+    question: "당신이 가장 중요하게 생각하는 가치는?",
+    emoji: "💎",
+    choices: [
+      { text: "정의와 용기", traits: { courage: 3, leadership: 1 } },
+      { text: "지식과 지혜", traits: { intelligence: 3, emotion: 1 } },
+      { text: "사랑과 우정", traits: { emotion: 3, social: 1 } },
+      { text: "자유와 모험", traits: { energy: 3, courage: 1 } },
+    ],
+  },
+  {
+    id: 7,
+    question: "처음 만난 사람과 대화할 때 당신은?",
+    emoji: "🗣️",
+    choices: [
+      { text: "먼저 다가가서 말을 건다", traits: { social: 3, courage: 1 } },
+      { text: "상대방을 관찰하며 파악한다", traits: { intelligence: 2, emotion: 1 } },
+      { text: "공통 관심사를 찾아 자연스럽게 대화한다", traits: { social: 2, intelligence: 1 } },
+      { text: "상대가 먼저 말 걸어주길 기다린다", traits: { emotion: 2 } },
+    ],
+  },
+  {
+    id: 8,
+    question: "영화를 고른다면 어떤 장르?",
+    emoji: "🎬",
+    choices: [
+      { text: "액션/어드벤처 - 짜릿한 모험!", traits: { courage: 2, energy: 2 } },
+      { text: "SF/미스터리 - 두뇌풀가동!", traits: { intelligence: 3 } },
+      { text: "로맨스/감동 - 눈물 한바탕!", traits: { emotion: 3 } },
+      { text: "코미디 - 다같이 웃자!", traits: { social: 2, energy: 1 } },
+    ],
+  },
+  {
+    id: 9,
+    question: "꿈에서 초능력을 얻었다! 어떤 능력?",
+    emoji: "✨",
+    choices: [
+      { text: "텔레파시 - 모든 마음을 읽는 능력", traits: { intelligence: 2, emotion: 2 } },
+      { text: "초강력 - 어떤 것도 부술 수 있는 힘", traits: { courage: 3, energy: 1 } },
+      { text: "순간이동 - 어디든 갈 수 있는 자유", traits: { energy: 2, courage: 1 } },
+      { text: "치유력 - 모두를 치료할 수 있는 능력", traits: { emotion: 3, social: 1 } },
+    ],
+  },
+  {
+    id: 10,
+    question: "인생에서 가장 듣고 싶은 칭찬은?",
+    emoji: "🏆",
+    choices: [
+      { text: "\"너는 정말 멋진 리더야\"", traits: { leadership: 3, courage: 1 } },
+      { text: "\"너는 정말 똑똑하고 현명해\"", traits: { intelligence: 3, leadership: 1 } },
+      { text: "\"네 옆에 있으면 정말 편안해\"", traits: { emotion: 2, social: 2 } },
+      { text: "\"너는 항상 열정적이고 멋져\"", traits: { energy: 3, courage: 1 } },
+    ],
+  },
+];
+
+// ========================================
+// Data: Pokemon Results
+// ========================================
+const POKEMON_RESULTS = [
+  {
+    id: 25, name: "피카츄", nameEn: "Pikachu",
+    dominantTraits: ["energy", "social"],
+    color: "#F8D030", bgGradient: "from-yellow-400 to-amber-500",
+    textColor: "text-yellow-900",
+    tagline: "밝고 활기찬 당신! 어디서든 분위기를 밝히는 인기쟁이",
+    description: "당신은 어디를 가든 주변을 밝게 만드는 에너지의 원천입니다! 피카츄처럼 활발하고 사교적인 성격 덕분에 사람들이 자연스럽게 당신 곁에 모입니다. 긍정적인 에너지가 넘치고, 어려운 상황에서도 유머와 밝은 미소로 분위기를 전환시키는 능력이 있어요. 당신의 열정은 전기처럼 주변 사람들에게 전파됩니다!",
+    type: "전기",
+  },
+  {
+    id: 1, name: "이상해씨", nameEn: "Bulbasaur",
+    dominantTraits: ["emotion", "intelligence"],
+    color: "#78C850", bgGradient: "from-green-400 to-emerald-600",
+    textColor: "text-green-900",
+    tagline: "차분하고 사려깊은 당신! 자연을 사랑하는 지혜로운 영혼",
+    description: "당신은 이상해씨처럼 차분하면서도 깊은 내면의 세계를 가진 사람입니다. 감성과 지성이 조화롭게 균형을 이루고 있어, 어떤 상황에서도 현명한 판단을 내릴 수 있어요. 주변 사람들의 감정을 잘 읽고 공감하는 능력이 뛰어나며, 조용하지만 확실한 존재감으로 모두에게 안정감을 줍니다. 느리지만 꾸준히 성장하는 타입이에요!",
+    type: "풀/독",
+  },
+  {
+    id: 4, name: "파이리", nameEn: "Charmander",
+    dominantTraits: ["courage", "energy"],
+    color: "#F08030", bgGradient: "from-orange-400 to-red-500",
+    textColor: "text-orange-900",
+    tagline: "열정적이고 용감한 당신! 도전을 두려워하지 않는 모험가",
+    description: "당신의 가슴 속에는 파이리의 꼬리불처럼 결코 꺼지지 않는 열정의 불꽃이 타오르고 있습니다! 새로운 도전에 주저하지 않고, 어려움 앞에서도 당당히 맞서는 용기가 있어요. 에너지가 넘치고 행동력이 뛰어나서 생각보다 몸이 먼저 움직이는 타입. 당신의 열정은 주변 사람들에게도 큰 영감을 줍니다!",
+    type: "불꽃",
+  },
+  {
+    id: 7, name: "꼬부기", nameEn: "Squirtle",
+    dominantTraits: ["social", "emotion"],
+    color: "#6890F0", bgGradient: "from-blue-400 to-cyan-500",
+    textColor: "text-blue-900",
+    tagline: "유쾌하고 다정한 당신! 친구들에게 사랑받는 존재",
+    description: "꼬부기처럼 유쾌하고 사교적인 당신은 타고난 인기쟁이! 사람들과 어울리는 것을 좋아하면서도, 감성적인 면이 있어 친구들의 마음을 잘 이해합니다. 물처럼 어떤 상황에서든 유연하게 적응하고, 갈등 상황에서는 중재자 역할을 잘 해냅니다. 당신과 함께하면 누구나 편안함을 느끼는, 천생 좋은 친구 타입이에요!",
+    type: "물",
+  },
+  {
+    id: 150, name: "뮤츠", nameEn: "Mewtwo",
+    dominantTraits: ["intelligence", "leadership"],
+    color: "#A040A0", bgGradient: "from-purple-500 to-indigo-700",
+    textColor: "text-purple-100",
+    tagline: "천재적 두뇌와 카리스마! 고독한 천재형",
+    description: "뮤츠처럼 뛰어난 지적 능력과 강한 카리스마를 겸비한 당신! 논리적 사고와 전략적 판단으로 어떤 복잡한 문제도 해결해내는 능력이 있습니다. 리더십이 강해 자연스럽게 리더의 위치에 서게 되지만, 때로는 고독을 즐기기도 해요. 깊은 사색을 좋아하고, 남들이 보지 못하는 본질을 꿰뚫어 보는 통찰력이 있습니다!",
+    type: "에스퍼",
+  },
+  {
+    id: 143, name: "잠만보", nameEn: "Snorlax",
+    dominantTraits: ["emotion"],
+    lowTraits: ["energy"],
+    color: "#A8B820", bgGradient: "from-teal-400 to-green-500",
+    textColor: "text-teal-900",
+    tagline: "여유롭고 평화로운 당신! 소소한 행복을 아는 힐러",
+    description: "잠만보처럼 여유롭고 평화를 사랑하는 당신! 바쁜 세상 속에서도 자신만의 페이스를 잃지 않고, 소소한 일상에서 행복을 찾을 줄 아는 현명한 사람입니다. 감성이 풍부해서 예술이나 음악, 맛있는 음식에서 큰 기쁨을 느끼고, 주변 사람들에게 편안한 안식처가 되어줍니다. 당신의 여유로움은 주변을 치유하는 힘이 있어요!",
+    type: "노말",
+  },
+  {
+    id: 133, name: "이브이", nameEn: "Eevee",
+    dominantTraits: ["balanced"],
+    color: "#C8A040", bgGradient: "from-amber-300 to-yellow-600",
+    textColor: "text-amber-900",
+    tagline: "무한한 가능성! 어떤 상황에도 적응하는 만능형",
+    description: "이브이처럼 무한한 가능성을 품고 있는 당신! 어떤 환경에서든 빠르게 적응하고, 다양한 분야에 관심과 재능을 보이는 만능형입니다. 하나에 집중하기보다는 여러 가지를 경험하고 싶어하는 호기심이 강하고, 상황에 따라 리더가 될 수도, 서포터가 될 수도 있는 유연함을 가지고 있어요. 당신의 미래는 아직 정해지지 않은 무한한 캔버스입니다!",
+    type: "노말",
+  },
+  {
+    id: 6, name: "리자몽", nameEn: "Charizard",
+    dominantTraits: ["courage", "leadership"],
+    color: "#F05030", bgGradient: "from-red-500 to-orange-600",
+    textColor: "text-red-100",
+    tagline: "강력한 카리스마의 소유자! 타고난 리더",
+    description: "리자몽처럼 강인하고 카리스마 넘치는 당신은 타고난 리더! 용기와 리더십이 결합되어, 어려운 상황에서도 앞장서서 팀을 이끄는 힘이 있습니다. 자존감이 높고 도전을 두려워하지 않으며, 한번 목표를 세우면 끝까지 달려가는 불굴의 의지가 있어요. 당신을 따르는 사람들에게 큰 신뢰와 안정감을 주는 진정한 리더입니다!",
+    type: "불꽃/비행",
+  },
+  {
+    id: 39, name: "푸린", nameEn: "Jigglypuff",
+    dominantTraits: ["emotion", "social"],
+    color: "#EE99AC", bgGradient: "from-pink-300 to-rose-500",
+    textColor: "text-pink-900",
+    tagline: "감성 충만한 예술가! 사람들의 마음을 움직이는 힘",
+    description: "푸린처럼 감성이 풍부하고 사교적인 당신은 타고난 예술가 기질! 음악, 미술, 글쓰기 등 감정을 표현하는 것에 뛰어난 재능이 있고, 사람들과의 교류에서 큰 에너지를 얻습니다. 다른 사람의 감정에 깊이 공감할 줄 알고, 당신만의 독특한 매력으로 주변을 사로잡아요. 때로는 관심받고 싶은 욕구가 강하지만, 그것도 당신의 매력!",
+    type: "노말/페어리",
+  },
+  {
+    id: 65, name: "후딘", nameEn: "Alakazam",
+    dominantTraits: ["intelligence", "intelligence"],
+    color: "#F8D030", bgGradient: "from-yellow-300 to-amber-600",
+    textColor: "text-yellow-900",
+    tagline: "뛰어난 분석력과 직관! 어떤 문제도 해결하는 천재",
+    description: "후딘처럼 뛰어난 지적 능력을 가진 당신! IQ가 5000이라는 후딘만큼은 아니지만, 뛰어난 분석력과 논리적 사고로 복잡한 문제를 척척 풀어내는 능력이 있습니다. 직관력도 좋아서 남들이 놓치는 패턴이나 연결고리를 쉽게 발견해요. 지식에 대한 끝없는 갈증과 호기심이 당신을 끊임없이 성장시키는 원동력입니다!",
+    type: "에스퍼",
+  },
+  {
+    id: 149, name: "망나뇽", nameEn: "Dragonite",
+    dominantTraits: ["courage", "emotion"],
+    color: "#F8A060", bgGradient: "from-orange-300 to-amber-500",
+    textColor: "text-orange-900",
+    tagline: "강하지만 따뜻한 마음! 의리있는 수호자",
+    description: "망나뇽처럼 강인하면서도 따뜻한 마음을 가진 당신! 용감하게 앞으로 나아가는 힘과, 주변 사람들을 진심으로 아끼는 감성이 아름답게 조화를 이루고 있어요. 위기 상황에서는 누구보다 용감하게 나서지만, 평소에는 부드럽고 다정한 사람입니다. 당신은 소중한 사람들을 지키기 위해서라면 무엇이든 할 수 있는 진정한 수호자예요!",
+    type: "드래곤/비행",
+  },
+  {
+    id: 131, name: "라프라스", nameEn: "Lapras",
+    dominantTraits: ["emotion", "intelligence"],
+    secondaryMatch: true,
+    color: "#6890F0", bgGradient: "from-blue-300 to-indigo-500",
+    textColor: "text-blue-100",
+    tagline: "깊은 내면의 세계! 신비롭고 지혜로운 존재",
+    description: "라프라스처럼 깊고 신비로운 내면을 가진 당신! 지적이면서도 감성적인 독특한 조합 덕분에 세상을 남들과는 다른 시각으로 바라봅니다. 조용하지만 깊은 사색을 즐기고, 한번 마음을 연 사람에게는 한없이 따뜻한 존재예요. 바다처럼 넓은 포용력과 깊은 지혜로, 사람들이 힘들 때 당신을 찾아오게 됩니다!",
+    type: "물/얼음",
+  },
+];
+
+// ========================================
+// Scoring Logic
+// ========================================
+function calculateResult(scores) {
+  const { courage, intelligence, social, emotion, energy, leadership } = scores;
+  const total = courage + intelligence + social + emotion + energy + leadership;
+
+  // Check for balanced (Eevee) - all traits within 3 points of each other
+  const vals = [courage, intelligence, social, emotion, energy, leadership];
+  const maxVal = Math.max(...vals);
+  const minVal = Math.min(...vals);
+  if (maxVal - minVal <= 3 && total > 0) {
+    return POKEMON_RESULTS.find(p => p.id === 133); // Eevee
+  }
+
+  // Find top two traits
+  const traitMap = { courage, intelligence, social, emotion, energy, leadership };
+  const sorted = Object.entries(traitMap).sort((a, b) => b[1] - a[1]);
+  const top1 = sorted[0][0];
+  const top2 = sorted[1][0];
+
+  // Snorlax: high emotion + lowest energy
+  if (top1 === "emotion" && energy <= 2) {
+    return POKEMON_RESULTS.find(p => p.id === 143);
+  }
+
+  // Alakazam: intelligence is dominant by far
+  if (top1 === "intelligence" && sorted[0][1] - sorted[1][1] >= 4) {
+    return POKEMON_RESULTS.find(p => p.id === 65);
+  }
+
+  // Match based on top two traits
+  const matchKey = [top1, top2].sort().join("+");
+
+  const traitToResult = {
+    "energy+social": 25,         // Pikachu
+    "emotion+intelligence": 1,   // Bulbasaur (first match)
+    "courage+energy": 4,         // Charmander
+    "emotion+social": 7,         // Squirtle
+    "intelligence+leadership": 150, // Mewtwo
+    "courage+leadership": 6,     // Charizard
+    "courage+emotion": 149,      // Dragonite
+  };
+
+  let resultId = traitToResult[matchKey];
+
+  // Secondary matches for overlapping combos
+  if (!resultId) {
+    if (top1 === "social" && top2 === "emotion" || top1 === "emotion" && top2 === "social") {
+      resultId = emotion > social ? 39 : 7; // Jigglypuff vs Squirtle
+    } else if (top1 === "emotion" && top2 === "intelligence" || top1 === "intelligence" && top2 === "emotion") {
+      resultId = intelligence > emotion ? 131 : 1; // Lapras vs Bulbasaur
+    } else if (top1 === "energy") {
+      resultId = 25; // Pikachu fallback
+    } else if (top1 === "courage") {
+      resultId = 4; // Charmander fallback
+    } else if (top1 === "intelligence") {
+      resultId = 65; // Alakazam fallback
+    } else if (top1 === "leadership") {
+      resultId = 6; // Charizard fallback
+    } else if (top1 === "social") {
+      resultId = 25; // Pikachu fallback
+    } else if (top1 === "emotion") {
+      resultId = 39; // Jigglypuff fallback
+    } else {
+      resultId = 133; // Eevee ultimate fallback
+    }
+  }
+
+  return POKEMON_RESULTS.find(p => p.id === resultId) || POKEMON_RESULTS[6];
+}
+
+// ========================================
+// Design System Components
+// ========================================
+function Button({ children, onClick, variant = "primary", size = "md", disabled = false, className = "" }) {
+  const baseClasses = "font-bold rounded-2xl transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+  const variants = {
+    primary: "bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl",
+    secondary: "bg-white/20 hover:bg-white/30 text-white border-2 border-white/30",
+    ghost: "bg-transparent hover:bg-white/10 text-white",
+  };
+  const sizes = {
+    sm: "px-4 py-2 text-sm",
+    md: "px-6 py-3 text-base",
+    lg: "px-8 py-4 text-lg",
+    xl: "px-10 py-5 text-xl",
+  };
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`}>
+      {children}
+    </button>
+  );
+}
+
+function ProgressBar({ current, total }) {
+  const pct = (current / total) * 100;
+  return (
+    <div className="w-full max-w-lg mx-auto">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-white/80 text-sm font-medium">질문 {current} / {total}</span>
+        <span className="text-white/80 text-sm font-medium">{Math.round(pct)}%</span>
+      </div>
+      <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
+        <div className="h-full bg-gradient-to-r from-yellow-400 to-red-500 rounded-full transition-all duration-500 ease-out"
+          style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// Confetti Component
+// ========================================
+function Confetti() {
+  const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#FF6BD6", "#845EC2", "#FFC75F"];
+  const pieces = useMemo(() => {
+    return Array.from({ length: 60 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      delay: Math.random() * 3,
+      duration: 2 + Math.random() * 3,
+      size: 6 + Math.random() * 10,
+      shape: Math.random() > 0.5 ? "50%" : "0%",
+    }));
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-50">
+      {pieces.map(p => (
+        <div key={p.id} className="confetti-piece"
+          style={{
+            left: `${p.left}%`,
+            width: `${p.size}px`,
+            height: `${p.size}px`,
+            backgroundColor: p.color,
+            borderRadius: p.shape,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.duration}s`,
+          }} />
+      ))}
+    </div>
+  );
+}
+
+// ========================================
+// Sparkles Component
+// ========================================
+function Sparkles() {
+  const sparkles = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      top: `${10 + Math.random() * 80}%`,
+      left: `${10 + Math.random() * 80}%`,
+      delay: Math.random() * 2,
+      size: 12 + Math.random() * 20,
+    }));
+  }, []);
+
+  return (
+    <>
+      {sparkles.map(s => (
+        <div key={s.id} className="sparkle-star text-yellow-300"
+          style={{ top: s.top, left: s.left, animationDelay: `${s.delay}s`, fontSize: `${s.size}px` }}>
+          &#10022;
+        </div>
+      ))}
+    </>
+  );
+}
+
+// ========================================
+// Radar Chart (SVG)
+// ========================================
+function RadarChart({ scores }) {
+  const traits = [
+    { key: "courage", label: "용기" },
+    { key: "intelligence", label: "지능" },
+    { key: "social", label: "사교성" },
+    { key: "emotion", label: "감성" },
+    { key: "energy", label: "에너지" },
+    { key: "leadership", label: "리더십" },
+  ];
+
+  const cx = 150, cy = 150, maxR = 110;
+  const maxScore = Math.max(...Object.values(scores), 1);
+
+  function getPoint(index, value) {
+    const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
+    const r = (value / (maxScore + 2)) * maxR;
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  }
+
+  const gridLevels = [0.25, 0.5, 0.75, 1.0];
+  const dataPoints = traits.map((t, i) => getPoint(i, scores[t.key] || 0));
+  const polygon = dataPoints.map(p => `${p.x},${p.y}`).join(" ");
+
+  return (
+    <svg viewBox="0 0 300 300" className="w-full max-w-[280px] mx-auto">
+      {/* Grid */}
+      {gridLevels.map((level, li) => {
+        const pts = traits.map((_, i) => {
+          const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+          const r = level * maxR;
+          return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`;
+        }).join(" ");
+        return <polygon key={li} points={pts} fill="none" stroke="white" strokeOpacity="0.2" strokeWidth="1" />;
+      })}
+      {/* Axes */}
+      {traits.map((_, i) => {
+        const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+        const x2 = cx + maxR * Math.cos(angle);
+        const y2 = cy + maxR * Math.sin(angle);
+        return <line key={i} x1={cx} y1={cy} x2={x2} y2={y2} stroke="white" strokeOpacity="0.2" strokeWidth="1" />;
+      })}
+      {/* Data */}
+      <polygon points={polygon} fill="rgba(255,220,100,0.3)" stroke="#FFD700" strokeWidth="2.5" />
+      {dataPoints.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r="5" fill="#FFD700" />
+      ))}
+      {/* Labels */}
+      {traits.map((t, i) => {
+        const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+        const r = maxR + 22;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        return (
+          <text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="middle"
+            fill="white" fontSize="13" fontWeight="bold">
+            {t.label}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ========================================
+// Pokeball SVG
+// ========================================
+function Pokeball({ size = 120 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" fill="#fff" stroke="#333" strokeWidth="4" />
+      <path d="M2,50 A48,48 0 0,1 98,50" fill="#EF4444" stroke="#333" strokeWidth="4" />
+      <line x1="2" y1="50" x2="98" y2="50" stroke="#333" strokeWidth="4" />
+      <circle cx="50" cy="50" r="14" fill="#fff" stroke="#333" strokeWidth="4" />
+      <circle cx="50" cy="50" r="8" fill="#fff" stroke="#333" strokeWidth="3" />
+    </svg>
+  );
+}
+
+// ========================================
+// Page: Intro Screen
+// ========================================
+function IntroScreen({ onStart }) {
+  const [shaking, setShaking] = useState(false);
+
+  const handleClick = () => {
+    setShaking(true);
+    setTimeout(() => onStart(), 600);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-br from-red-500 via-red-600 to-yellow-500 relative overflow-hidden">
+      {/* Background decorations */}
+      <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl" />
+      <div className="absolute bottom-20 right-10 w-32 h-32 bg-yellow-300/10 rounded-full blur-2xl" />
+      <div className="absolute top-1/4 right-1/4 w-16 h-16 bg-white/5 rounded-full blur-lg" />
+
+      <div className="text-center z-10">
+        <div className={`mb-8 inline-block ${shaking ? 'animate-pokeball-shake' : 'animate-pokeball'}`}>
+          <Pokeball size={140} />
+        </div>
+
+        <h1 className="text-4xl md:text-5xl font-black text-white mb-4 drop-shadow-lg">
+          포켓몬 성격 테스트
+        </h1>
+        <p className="text-white/90 text-lg md:text-xl mb-2 font-medium">
+          나와 닮은 포켓몬은 누구?
+        </p>
+        <p className="text-white/70 text-sm md:text-base mb-10 max-w-md mx-auto">
+          10가지 질문으로 알아보는 나의 포켓몬 성격 유형!<br/>
+          솔직하게 답해주세요 :)
+        </p>
+
+        <Button onClick={handleClick} variant="secondary" size="xl"
+          className="animate-pulse-glow hover:scale-105 text-xl">
+          테스트 시작하기!
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// Page: Question Screen
+// ========================================
+function QuestionScreen({ onComplete }) {
+  const [currentQ, setCurrentQ] = useState(0);
+  const [scores, setScores] = useState({
+    courage: 0, intelligence: 0, social: 0, emotion: 0, energy: 0, leadership: 0,
+  });
+  const [animState, setAnimState] = useState("in"); // "in" | "out"
+  const [selectedIdx, setSelectedIdx] = useState(null);
+
+  const question = QUESTIONS[currentQ];
+
+  const handleAnswer = useCallback((choice, idx) => {
+    if (selectedIdx !== null) return;
+    setSelectedIdx(idx);
+
+    const newScores = { ...scores };
+    Object.entries(choice.traits).forEach(([trait, val]) => {
+      newScores[trait] = (newScores[trait] || 0) + val;
+    });
+    setScores(newScores);
+
+    // Animate out then advance
+    setTimeout(() => setAnimState("out"), 300);
+    setTimeout(() => {
+      if (currentQ + 1 < QUESTIONS.length) {
+        setCurrentQ(currentQ + 1);
+        setAnimState("in");
+        setSelectedIdx(null);
+      } else {
+        onComplete(newScores);
+      }
+    }, 700);
+  }, [currentQ, scores, selectedIdx, onComplete]);
+
+  const choiceColors = [
+    "from-red-400 to-pink-500",
+    "from-blue-400 to-cyan-500",
+    "from-green-400 to-emerald-500",
+    "from-purple-400 to-indigo-500",
+  ];
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 bg-gradient-to-br from-slate-800 via-slate-900 to-gray-900">
+      <div className="w-full max-w-lg mb-8">
+        <ProgressBar current={currentQ + 1} total={QUESTIONS.length} />
+      </div>
+
+      <div className={`w-full max-w-lg ${animState === "in" ? "animate-slide-in" : "animate-slide-out"}`}>
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 shadow-2xl border border-white/10">
+          <div className="text-center mb-6">
+            <span className="text-5xl mb-4 block">{question.emoji}</span>
+            <h2 className="text-xl md:text-2xl font-bold text-white leading-relaxed">
+              {question.question}
+            </h2>
+          </div>
+
+          <div className="space-y-3">
+            {question.choices.map((choice, i) => (
+              <button key={i} onClick={() => handleAnswer(choice, i)}
+                className={`btn-choice w-full text-left p-4 rounded-2xl font-medium text-white
+                  bg-gradient-to-r ${choiceColors[i]}
+                  ${selectedIdx === i ? "ring-4 ring-yellow-300 scale-[1.03]" : "opacity-90 hover:opacity-100"}
+                  ${selectedIdx !== null && selectedIdx !== i ? "opacity-40" : ""}
+                  shadow-md`}>
+                <span className="text-white/70 font-bold mr-2">{String.fromCharCode(65 + i)}.</span>
+                {choice.text}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// Page: Result Screen
+// ========================================
+function ResultScreen({ scores, onRetry }) {
+  const [showConfetti, setShowConfetti] = useState(true);
+  const [revealed, setRevealed] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const result = useMemo(() => calculateResult(scores), [scores]);
+
+  useEffect(() => {
+    const timer1 = setTimeout(() => setRevealed(true), 500);
+    const timer2 = setTimeout(() => setShowConfetti(false), 5000);
+    return () => { clearTimeout(timer1); clearTimeout(timer2); };
+  }, []);
+
+  const traitLabels = {
+    courage: "용기", intelligence: "지능", social: "사교성",
+    emotion: "감성", energy: "에너지", leadership: "리더십",
+  };
+
+  const maxScore = Math.max(...Object.values(scores), 1);
+  const sortedTraits = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+
+  const handleShare = () => {
+    const text = `포켓몬 성격 테스트 결과!\n나와 닮은 포켓몬은 ${result.name} (${result.nameEn}) #${result.id}\n"${result.tagline}"\n\n나도 테스트 해보기!`;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${result.id}.gif`;
+
+  return (
+    <div className={`min-h-screen bg-gradient-to-br ${result.bgGradient} relative overflow-hidden`}>
+      {showConfetti && <Confetti />}
+
+      <div className="relative z-10 flex flex-col items-center px-4 py-8 md:py-12">
+        {/* Header */}
+        <div className={`text-center mb-6 ${revealed ? "animate-fade-up" : "opacity-0"}`}>
+          <p className="text-white/80 text-sm font-medium mb-1 tracking-widest uppercase">당신과 닮은 포켓몬은...</p>
+        </div>
+
+        {/* Pokemon Image */}
+        <div className={`relative mb-6 ${revealed ? "animate-fade-up" : "opacity-0"}`}
+          style={{ animationDelay: "0.2s" }}>
+          <Sparkles />
+          <div className="animate-float">
+            <img src={spriteUrl} alt={result.name}
+              className="pokemon-img w-40 h-40 md:w-52 md:h-52 object-contain drop-shadow-2xl"
+              onError={(e) => {
+                e.target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${result.id}.png`;
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Name & Tagline */}
+        <div className={`text-center mb-8 ${revealed ? "animate-fade-up" : "opacity-0"}`}
+          style={{ animationDelay: "0.4s" }}>
+          <div className="inline-block bg-black/20 backdrop-blur-md rounded-full px-4 py-1 mb-3">
+            <span className="text-white/80 text-sm font-medium">No.{String(result.id).padStart(3, "0")} | {result.type}</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black text-white mb-2 drop-shadow-lg">
+            {result.name}
+          </h1>
+          <p className="text-white/80 text-lg font-medium mb-3">{result.nameEn}</p>
+          <p className="text-white text-lg md:text-xl font-bold max-w-md mx-auto leading-relaxed">
+            "{result.tagline}"
+          </p>
+        </div>
+
+        {/* Main Card */}
+        <div className={`w-full max-w-lg ${revealed ? "animate-fade-up" : "opacity-0"}`}
+          style={{ animationDelay: "0.6s" }}>
+          <div className="bg-black/20 backdrop-blur-md rounded-3xl p-6 md:p-8 shadow-2xl border border-white/10 mb-6">
+            {/* Description */}
+            <h3 className="text-white font-bold text-lg mb-3">성격 분석</h3>
+            <p className="text-white/90 leading-relaxed mb-6 text-sm md:text-base">
+              {result.description}
+            </p>
+
+            {/* Radar Chart */}
+            <h3 className="text-white font-bold text-lg mb-3 text-center">성격 프로필</h3>
+            <RadarChart scores={scores} />
+          </div>
+
+          {/* Trait Bars */}
+          <div className={`bg-black/20 backdrop-blur-md rounded-3xl p-6 md:p-8 shadow-2xl border border-white/10 mb-6 ${revealed ? "animate-fade-up" : "opacity-0"}`}
+            style={{ animationDelay: "0.8s" }}>
+            <h3 className="text-white font-bold text-lg mb-4">특성 수치</h3>
+            <div className="space-y-3">
+              {sortedTraits.map(([key, val], i) => {
+                const pct = maxScore > 0 ? Math.round((val / (maxScore + 2)) * 100) : 0;
+                return (
+                  <div key={key}>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-white font-medium text-sm">{traitLabels[key]}</span>
+                      <span className="text-white/70 text-sm">{val}점</span>
+                    </div>
+                    <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-yellow-300 to-white rounded-full bar-animate"
+                        style={{ width: `${pct}%`, animationDelay: `${0.8 + i * 0.1}s` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className={`flex flex-col sm:flex-row gap-3 ${revealed ? "animate-fade-up" : "opacity-0"}`}
+            style={{ animationDelay: "1s" }}>
+            <Button onClick={handleShare} variant="secondary" size="lg" className="flex-1 text-center">
+              {copied ? "복사 완료!" : "결과 공유하기"}
+            </Button>
+            <Button onClick={onRetry} variant="primary" size="lg" className="flex-1 text-center">
+              다시 테스트하기
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// App Component
+// ========================================
+function App() {
+  const [screen, setScreen] = useState("intro"); // "intro" | "quiz" | "result"
+  const [finalScores, setFinalScores] = useState(null);
+
+  const handleStart = useCallback(() => setScreen("quiz"), []);
+
+  const handleComplete = useCallback((scores) => {
+    setFinalScores(scores);
+    setScreen("result");
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setFinalScores(null);
+    setScreen("intro");
+  }, []);
+
+  if (screen === "intro") return <IntroScreen onStart={handleStart} />;
+  if (screen === "quiz") return <QuestionScreen onComplete={handleComplete} />;
+  if (screen === "result") return <ResultScreen scores={finalScores} onRetry={handleRetry} />;
+}
+
+// ========================================
+// Rendering
+// ========================================
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
