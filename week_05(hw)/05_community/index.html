@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>커뮤니티</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, 'Pretendard', sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    /* 네비게이션 */
+    .nav {
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-user {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .nav-btn {
+      padding: 6px 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .nav-btn:hover { background: #f5f5f5; }
+
+    .nav-btn-primary {
+      background: #333;
+      color: #fff;
+      border-color: #333;
+    }
+
+    .nav-btn-primary:hover { background: #555; }
+
+    /* 컨테이너 */
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+
+    /* 페이지 숨김 */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ─── 로그인/회원가입 ─── */
+    .auth-box {
+      max-width: 360px;
+      margin: 80px auto;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 32px;
+    }
+
+    .auth-box h2 {
+      font-size: 20px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .auth-box input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .auth-box input:focus { border-color: #333; outline: none; }
+
+    .auth-box button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      background: #333;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .auth-box button:hover { background: #555; }
+
+    .auth-switch {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #888;
+    }
+
+    .auth-switch a {
+      color: #333;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .auth-error {
+      color: #d32f2f;
+      font-size: 13px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    /* ─── 게시글 목록 ─── */
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .list-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .write-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #333;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .write-btn:hover { background: #555; }
+
+    .post-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      background: #e0e0e0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .post-item {
+      background: #fff;
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .post-item:hover { background: #fafafa; }
+
+    .post-item-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .post-item-meta {
+      font-size: 12px;
+      color: #999;
+      display: flex;
+      gap: 12px;
+    }
+
+    .post-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+      background: #fff;
+      border-radius: 8px;
+    }
+
+    /* ─── 게시글 상세 ─── */
+    .detail-back {
+      font-size: 13px;
+      color: #888;
+      cursor: pointer;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+
+    .detail-back:hover { color: #333; }
+
+    .detail-card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 28px;
+    }
+
+    .detail-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .detail-meta {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .detail-meta-left {
+      display: flex;
+      gap: 12px;
+    }
+
+    .detail-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .detail-actions button {
+      padding: 4px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .detail-actions button:hover { background: #f5f5f5; }
+    .detail-actions .del-btn:hover { border-color: #d32f2f; color: #d32f2f; }
+
+    .detail-content {
+      font-size: 15px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
+    /* ─── 글쓰기/수정 ─── */
+    .editor-card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 28px;
+    }
+
+    .editor-card h2 {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    .editor-card input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+
+    .editor-card textarea {
+      width: 100%;
+      height: 280px;
+      padding: 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.7;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .editor-card input:focus,
+    .editor-card textarea:focus { border-color: #333; outline: none; }
+
+    .editor-btns {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .editor-btns button {
+      padding: 8px 20px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .editor-btns .submit-btn {
+      background: #333;
+      color: #fff;
+      border-color: #333;
+    }
+
+    .editor-btns .submit-btn:hover { background: #555; }
+    .editor-btns button:hover { background: #f5f5f5; }
+  </style>
+</head>
+<body>
+
+  <!-- 네비게이션 -->
+  <nav class="nav">
+    <div class="nav-logo" onclick="goList()">커뮤니티</div>
+    <div class="nav-right" id="nav-right"></div>
+  </nav>
+
+  <!-- 로그인 -->
+  <div class="page" id="page-login">
+    <div class="auth-box">
+      <h2>로그인</h2>
+      <div class="auth-error" id="login-error"></div>
+      <input type="text" id="login-username" placeholder="아이디">
+      <input type="password" id="login-password" placeholder="비밀번호">
+      <button onclick="login()">로그인</button>
+      <div class="auth-switch">
+        계정이 없으신가요? <a onclick="showPage('page-register')">회원가입</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 회원가입 -->
+  <div class="page" id="page-register">
+    <div class="auth-box">
+      <h2>회원가입</h2>
+      <div class="auth-error" id="register-error"></div>
+      <input type="text" id="reg-username" placeholder="아이디">
+      <input type="password" id="reg-password" placeholder="비밀번호">
+      <button onclick="register()">가입하기</button>
+      <div class="auth-switch">
+        이미 계정이 있으신가요? <a onclick="showPage('page-login')">로그인</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 게시글 목록 -->
+  <div class="page" id="page-list">
+    <div class="container">
+      <div class="list-header">
+        <h2>게시판</h2>
+        <button class="write-btn" id="write-btn" onclick="goWrite()" style="display:none">글쓰기</button>
+      </div>
+      <div id="post-list"></div>
+    </div>
+  </div>
+
+  <!-- 게시글 상세 -->
+  <div class="page" id="page-detail">
+    <div class="container">
+      <span class="detail-back" onclick="goList()">&larr; 목록으로</span>
+      <div class="detail-card" id="detail-card"></div>
+    </div>
+  </div>
+
+  <!-- 글쓰기 / 수정 -->
+  <div class="page" id="page-editor">
+    <div class="container">
+      <span class="detail-back" onclick="goList()">&larr; 목록으로</span>
+      <div class="editor-card">
+        <h2 id="editor-title-label">글쓰기</h2>
+        <input type="text" id="editor-title" placeholder="제목을 입력하세요">
+        <textarea id="editor-content" placeholder="내용을 입력하세요"></textarea>
+        <div class="editor-btns">
+          <button onclick="goList()">취소</button>
+          <button class="submit-btn" onclick="submitPost()">등록</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('token');
+    let currentUser = null;
+    let editingPostId = null;
+
+    // 초기화
+    function init() {
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          currentUser = { id: payload.id, username: payload.username };
+          goList();
+        } catch {
+          logout();
+        }
+      } else {
+        goList();
+      }
+      updateNav();
+    }
+
+    // 네비게이션 업데이트
+    function updateNav() {
+      const nav = document.getElementById('nav-right');
+      if (currentUser) {
+        nav.innerHTML = `
+          <span class="nav-user">${currentUser.username}</span>
+          <button class="nav-btn" onclick="logout()">로그아웃</button>
+        `;
+        document.getElementById('write-btn').style.display = '';
+      } else {
+        nav.innerHTML = `
+          <button class="nav-btn" onclick="showPage('page-login')">로그인</button>
+          <button class="nav-btn nav-btn-primary" onclick="showPage('page-register')">회원가입</button>
+        `;
+        document.getElementById('write-btn').style.display = 'none';
+      }
+    }
+
+    // 페이지 전환
+    function showPage(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    // 로그인
+    async function login() {
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errEl = document.getElementById('login-error');
+      errEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+
+        token = data.token;
+        currentUser = data.user;
+        localStorage.setItem('token', token);
+        updateNav();
+        goList();
+      } catch (err) {
+        errEl.textContent = '서버 연결 실패'; errEl.style.display = 'block';
+      }
+    }
+
+    // 회원가입
+    async function register() {
+      const username = document.getElementById('reg-username').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const errEl = document.getElementById('register-error');
+      errEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+
+        token = data.token;
+        currentUser = data.user;
+        localStorage.setItem('token', token);
+        updateNav();
+        goList();
+      } catch (err) {
+        errEl.textContent = '서버 연결 실패'; errEl.style.display = 'block';
+      }
+    }
+
+    // 로그아웃
+    function logout() {
+      token = null;
+      currentUser = null;
+      localStorage.removeItem('token');
+      updateNav();
+      goList();
+    }
+
+    // 엔터로 로그인/가입
+    document.getElementById('login-password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') login();
+    });
+    document.getElementById('reg-password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') register();
+    });
+
+    // 날짜 포맷
+    function formatDate(ts) {
+      const d = new Date(ts);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      return `${y}.${m}.${day} ${h}:${min}`;
+    }
+
+    // ─── 게시글 목록 ───
+    async function goList() {
+      showPage('page-list');
+      try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch('/api/posts', { headers });
+        const data = await res.json();
+
+        const listEl = document.getElementById('post-list');
+        if (data.posts.length === 0) {
+          listEl.innerHTML = '<div class="post-empty">게시글이 없습니다.</div>';
+          return;
+        }
+
+        listEl.innerHTML = '<div class="post-list">' + data.posts.map(p => `
+          <div class="post-item" onclick="goDetail(${p.id})">
+            <div class="post-item-title">${esc(p.title)}</div>
+            <div class="post-item-meta">
+              <span>${esc(p.author)}</span>
+              <span>${formatDate(p.created_at)}</span>
+            </div>
+          </div>
+        `).join('') + '</div>';
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // ─── 게시글 상세 ───
+    async function goDetail(id) {
+      showPage('page-detail');
+      try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`/api/posts/${id}`, { headers });
+        const data = await res.json();
+        const p = data.post;
+
+        const actions = p.isMine ? `
+          <div class="detail-actions">
+            <button onclick="goEdit(${p.id})">수정</button>
+            <button class="del-btn" onclick="deletePost(${p.id})">삭제</button>
+          </div>
+        ` : '';
+
+        document.getElementById('detail-card').innerHTML = `
+          <div class="detail-title">${esc(p.title)}</div>
+          <div class="detail-meta">
+            <div class="detail-meta-left">
+              <span>${esc(p.author)}</span>
+              <span>${formatDate(p.created_at)}</span>
+            </div>
+            ${actions}
+          </div>
+          <div class="detail-content">${esc(p.content)}</div>
+        `;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // ─── 글쓰기 ───
+    function goWrite() {
+      if (!currentUser) { showPage('page-login'); return; }
+      editingPostId = null;
+      document.getElementById('editor-title-label').textContent = '글쓰기';
+      document.getElementById('editor-title').value = '';
+      document.getElementById('editor-content').value = '';
+      showPage('page-editor');
+    }
+
+    // ─── 수정 ───
+    async function goEdit(id) {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`/api/posts/${id}`, { headers });
+      const data = await res.json();
+      const p = data.post;
+
+      editingPostId = id;
+      document.getElementById('editor-title-label').textContent = '수정하기';
+      document.getElementById('editor-title').value = p.title;
+      document.getElementById('editor-content').value = p.content;
+      showPage('page-editor');
+    }
+
+    // ─── 등록/수정 제출 ───
+    async function submitPost() {
+      const title = document.getElementById('editor-title').value.trim();
+      const content = document.getElementById('editor-content').value.trim();
+      if (!title || !content) { alert('제목과 내용을 입력하세요'); return; }
+
+      const url = editingPostId ? `/api/posts/${editingPostId}` : '/api/posts';
+      const method = editingPostId ? 'PUT' : 'POST';
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ title, content }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error); return; }
+
+        if (editingPostId) {
+          goDetail(editingPostId);
+        } else {
+          goList();
+        }
+      } catch (err) {
+        alert('서버 오류');
+      }
+    }
+
+    // ─── 삭제 ───
+    async function deletePost(id) {
+      if (!confirm('정말 삭제하시겠습니까?')) return;
+      try {
+        const res = await fetch(`/api/posts/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) goList();
+        else { const data = await res.json(); alert(data.error); }
+      } catch (err) {
+        alert('서버 오류');
+      }
+    }
+
+    // HTML 이스케이프
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    init();
+  </script>
+</body>
+</html>
