@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>가계부</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>가계부</h1>
+
+    <!-- 대시보드 -->
+    <div class="dashboard">
+      <div class="dashboard-total">
+        <div class="dashboard-total-label">총 지출</div>
+        <div class="dashboard-total-amount" id="dashboard-grand-total">0원</div>
+      </div>
+      <div class="dashboard-categories" id="dashboard-categories"></div>
+    </div>
+
+    <!-- 입력 폼 -->
+    <form id="entry-form">
+      <div class="form-row">
+        <input type="date" id="date" required>
+        <select id="category" required>
+          <option value="">카테고리</option>
+          <option value="식비">식비</option>
+          <option value="교통">교통</option>
+          <option value="쇼핑">쇼핑</option>
+          <option value="문화">문화</option>
+          <option value="의료">의료</option>
+          <option value="주거">주거</option>
+          <option value="통신">통신</option>
+          <option value="기타">기타</option>
+        </select>
+        <input type="text" id="item-name" placeholder="품명" required>
+        <input type="number" id="amount" placeholder="금액" required min="0">
+        <input type="text" id="memo" placeholder="메모">
+        <button type="submit" id="submit-btn">추가</button>
+        <button type="button" id="cancel-btn" class="hidden">취소</button>
+      </div>
+    </form>
+
+    <!-- 필터 -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>필터:</label>
+        <select id="filter-category">
+          <option value="all">전체</option>
+          <option value="식비">식비</option>
+          <option value="교통">교통</option>
+          <option value="쇼핑">쇼핑</option>
+          <option value="문화">문화</option>
+          <option value="의료">의료</option>
+          <option value="주거">주거</option>
+          <option value="통신">통신</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="entry-count"><span id="entry-count">0</span>건</div>
+    </div>
+
+    <!-- 테이블 -->
+    <table id="budget-table">
+      <thead>
+        <tr>
+          <th>날짜</th>
+          <th>카테고리</th>
+          <th>품명</th>
+          <th>금액</th>
+          <th>메모</th>
+          <th>관리</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" class="total-label">합계</td>
+          <td id="total-amount" class="total-value">0</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

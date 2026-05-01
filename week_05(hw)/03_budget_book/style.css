@@ -1,0 +1,281 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, 'Pretendard', sans-serif;
+  background: #fafafa;
+  color: #222;
+  padding: 40px 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+/* 대시보드 */
+.dashboard {
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dashboard-total {
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.dashboard-total-label {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.dashboard-total-amount {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-categories {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.dashboard-card {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.dashboard-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.dashboard-card-header .chip {
+  font-size: 11px;
+  padding: 1px 8px;
+}
+
+.dashboard-card-count {
+  font-size: 11px;
+  color: #999;
+}
+
+.dashboard-card-amount {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-card-bar {
+  margin-top: 8px;
+  height: 4px;
+  border-radius: 2px;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+
+.dashboard-card-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* 바 색상 - 칩과 동일 계열 */
+.bar-식비 { background: #4caf50; }
+.bar-교통 { background: #1e88e5; }
+.bar-쇼핑 { background: #e53935; }
+.bar-문화 { background: #8e24aa; }
+.bar-의료 { background: #ef6c00; }
+.bar-주거 { background: #00897b; }
+.bar-통신 { background: #3949ab; }
+.bar-기타 { background: #757575; }
+
+/* 폼 */
+#entry-form {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.form-row input,
+.form-row select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-row input[type="date"] { width: 150px; }
+.form-row select { width: 120px; }
+.form-row input[type="text"] { width: 140px; }
+.form-row input[type="number"] { width: 120px; }
+
+.form-row button {
+  padding: 8px 16px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #333;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.form-row button:hover {
+  background: #555;
+}
+
+#cancel-btn {
+  background: #fff;
+  color: #333;
+}
+
+#cancel-btn:hover {
+  background: #eee;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* 필터 */
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-group label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.filter-group select {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.entry-count {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 카테고리 칩 */
+.chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.chip-식비 { background: #e8f5e9; color: #2e7d32; }
+.chip-교통 { background: #e3f2fd; color: #1565c0; }
+.chip-쇼핑 { background: #fce4ec; color: #c62828; }
+.chip-문화 { background: #f3e5f5; color: #7b1fa2; }
+.chip-의료 { background: #fff3e0; color: #e65100; }
+.chip-주거 { background: #e0f2f1; color: #00695c; }
+.chip-통신 { background: #e8eaf6; color: #283593; }
+.chip-기타 { background: #f5f5f5; color: #616161; }
+
+/* 테이블 */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 2px solid #333;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+tbody tr:hover {
+  background: #f5f5f5;
+}
+
+td:nth-child(4) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.action-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.action-btns button {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.action-btns button:hover {
+  background: #eee;
+}
+
+.action-btns .delete-btn:hover {
+  border-color: #c00;
+  color: #c00;
+}
+
+/* 테이블 하단 합계 */
+tfoot td {
+  padding: 12px 12px;
+  border-top: 2px solid #333;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.total-label {
+  text-align: right;
+}
+
+.total-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
