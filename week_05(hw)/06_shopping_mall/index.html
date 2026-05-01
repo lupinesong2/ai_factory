@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SHOE STORE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<style>
+    .product-img {
+        transition: transform 0.3s ease;
+    }
+    .product-img:hover {
+        transform: scale(1.05);
+    }
+</style>
+<body class="bg-white text-gray-900">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useContext, createContext, useCallback } = React;
+
+        // ─── API Helper ───
+        const API = '/api';
+        function getToken() { return localStorage.getItem('shoe_token'); }
+        function authHeaders() {
+            const t = getToken();
+            return t ? { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` } : { 'Content-Type': 'application/json' };
+        }
+
+        // ─── Auth Context ───
+        const AuthContext = createContext();
+
+        function AuthProvider({ children }) {
+            const [user, setUser] = useState(() => {
+                const t = getToken();
+                if (!t) return null;
+                try { const p = JSON.parse(atob(t.split('.')[1])); return { id: p.id, username: p.username }; }
+                catch { return null; }
+            });
+
+            const login = async (username, password) => {
+                const res = await fetch(`${API}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+                const data = await res.json();
+                if (!res.ok) return { ok: false, msg: data.error };
+                localStorage.setItem('shoe_token', data.token);
+                setUser(data.user);
+                return { ok: true };
+            };
+
+            const register = async (username, password) => {
+                const res = await fetch(`${API}/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+                const data = await res.json();
+                if (!res.ok) return { ok: false, msg: data.error };
+                localStorage.setItem('shoe_token', data.token);
+                setUser(data.user);
+                return { ok: true };
+            };
+
+            const logout = () => { setUser(null); localStorage.removeItem('shoe_token'); };
+
+            return (
+                <AuthContext.Provider value={{ user, login, register, logout }}>
+                    {children}
+                </AuthContext.Provider>
+            );
+        }
+
+        // ─── Cart Context ───
+        const CartContext = createContext();
+
+        function CartProvider({ children }) {
+            const [items, setItems] = useState([]);
+            const [total, setTotal] = useState(0);
+            const [count, setCount] = useState(0);
+            const { user } = useContext(AuthContext);
+
+            const fetchCart = async () => {
+                if (!getToken()) { setItems([]); setTotal(0); setCount(0); return; }
+                try {
+                    const res = await fetch(`${API}/cart`, { headers: authHeaders() });
+                    if (!res.ok) { setItems([]); setTotal(0); setCount(0); return; }
+                    const data = await res.json();
+                    setItems(data.items);
+                    setTotal(data.total);
+                    setCount(data.count);
+                } catch { setItems([]); setTotal(0); setCount(0); }
+            };
+
+            useEffect(() => { fetchCart(); }, [user]);
+
+            const addItem = async (productId) => {
+                await fetch(`${API}/cart`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ productId }) });
+                fetchCart();
+            };
+
+            const removeItem = async (productId) => {
+                await fetch(`${API}/cart/${productId}`, { method: 'DELETE', headers: authHeaders() });
+                fetchCart();
+            };
+
+            const updateQty = async (productId, quantity) => {
+                await fetch(`${API}/cart/${productId}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ quantity }) });
+                fetchCart();
+            };
+
+            const placeOrder = async () => {
+                const res = await fetch(`${API}/orders`, { method: 'POST', headers: authHeaders() });
+                if (res.ok) { fetchCart(); return true; }
+                return false;
+            };
+
+            return (
+                <CartContext.Provider value={{ items, total, count, addItem, removeItem, updateQty, placeOrder, fetchCart }}>
+                    {children}
+                </CartContext.Provider>
+            );
+        }
+
+        const fmt = (n) => n.toLocaleString('ko-KR') + '원';
+
+        // ─── Modal ───
+        function Modal({ open, onClose, children }) {
+            if (!open) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+                    <div className="bg-white border border-gray-300 rounded-lg shadow-lg w-full max-w-sm mx-4 p-6" onClick={e => e.stopPropagation()}>
+                        {children}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── Login Modal ───
+        function LoginModal({ open, onClose, onSwitchToRegister }) {
+            const { login } = useContext(AuthContext);
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                const res = await login(username, password);
+                if (res.ok) { onClose(); setUsername(''); setPassword(''); setError(''); }
+                else setError(res.msg);
+            };
+
+            return (
+                <Modal open={open} onClose={onClose}>
+                    <h2 className="text-xl font-bold mb-4">로그인</h2>
+                    <form onSubmit={handleSubmit} className="space-y-3">
+                        <input className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-gray-500" placeholder="아이디" value={username} onChange={e => setUsername(e.target.value)} />
+                        <input className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-gray-500" type="password" placeholder="비밀번호" value={password} onChange={e => setPassword(e.target.value)} />
+                        {error && <p className="text-gray-600 text-sm">{error}</p>}
+                        <button type="submit" className="w-full bg-gray-900 text-white py-2 rounded hover:bg-gray-800 transition">로그인</button>
+                    </form>
+                    <p className="text-center text-sm text-gray-500 mt-4">
+                        계정이 없으신가요? <button className="underline text-gray-700 hover:text-gray-900" onClick={onSwitchToRegister}>회원가입</button>
+                    </p>
+                </Modal>
+            );
+        }
+
+        // ─── Register Modal ───
+        function RegisterModal({ open, onClose, onSwitchToLogin }) {
+            const { register } = useContext(AuthContext);
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [confirm, setConfirm] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (password !== confirm) { setError('비밀번호가 일치하지 않습니다.'); return; }
+                const res = await register(username, password);
+                if (res.ok) { onClose(); setUsername(''); setPassword(''); setConfirm(''); setError(''); }
+                else setError(res.msg);
+            };
+
+            return (
+                <Modal open={open} onClose={onClose}>
+                    <h2 className="text-xl font-bold mb-4">회원가입</h2>
+                    <form onSubmit={handleSubmit} className="space-y-3">
+                        <input className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-gray-500" placeholder="아이디 (2자 이상)" value={username} onChange={e => setUsername(e.target.value)} />
+                        <input className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-gray-500" type="password" placeholder="비밀번호 (4자 이상)" value={password} onChange={e => setPassword(e.target.value)} />
+                        <input className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-gray-500" type="password" placeholder="비밀번호 확인" value={confirm} onChange={e => setConfirm(e.target.value)} />
+                        {error && <p className="text-gray-600 text-sm">{error}</p>}
+                        <button type="submit" className="w-full bg-gray-900 text-white py-2 rounded hover:bg-gray-800 transition">회원가입</button>
+                    </form>
+                    <p className="text-center text-sm text-gray-500 mt-4">
+                        이미 계정이 있으신가요? <button className="underline text-gray-700 hover:text-gray-900" onClick={onSwitchToLogin}>로그인</button>
+                    </p>
+                </Modal>
+            );
+        }
+
+        // ─── Navbar ───
+        function Navbar({ onLoginClick }) {
+            const { user, logout } = useContext(AuthContext);
+            const { count } = useContext(CartContext);
+
+            return (
+                <nav className="border-b border-gray-200 bg-white sticky top-0 z-40">
+                    <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+                        <a href="#/" className="text-xl font-bold tracking-tight">SHOE STORE</a>
+                        <div className="flex items-center gap-4">
+                            <a href="#/cart" className="text-sm hover:underline">
+                                장바구니{count > 0 && <span className="ml-1 bg-gray-900 text-white text-xs rounded-full px-1.5 py-0.5">{count}</span>}
+                            </a>
+                            {user ? (
+                                <div className="flex items-center gap-3">
+                                    <span className="text-sm text-gray-600">{user.username}님</span>
+                                    <button onClick={logout} className="text-sm text-gray-500 hover:text-gray-900 hover:underline">로그아웃</button>
+                                </div>
+                            ) : (
+                                <button onClick={onLoginClick} className="text-sm hover:underline">로그인</button>
+                            )}
+                        </div>
+                    </div>
+                </nav>
+            );
+        }
+
+        // ─── Product Card ───
+        function ProductCard({ product, onBuy }) {
+            const { addItem } = useContext(CartContext);
+            const { user } = useContext(AuthContext);
+
+            const handleAddCart = () => {
+                if (!user) { onBuy(); return; }
+                addItem(product.id);
+            };
+
+            const handleBuy = () => {
+                if (!user) { onBuy(); return; }
+                addItem(product.id);
+                window.location.hash = '#/cart';
+            };
+
+            return (
+                <div className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition">
+                    <div className="aspect-square bg-gray-100 overflow-hidden flex items-center justify-center p-4">
+                        <img src={product.image} alt={product.name} className="product-img w-full h-full object-contain mix-blend-multiply" loading="lazy" />
+                    </div>
+                    <div className="p-4">
+                        <h3 className="font-semibold text-sm mb-1">{product.name}</h3>
+                        <p className="text-lg font-bold mb-3">{fmt(product.price)}</p>
+                        <div className="flex gap-2">
+                            <button onClick={handleAddCart} className="flex-1 border border-gray-300 text-sm py-2 rounded hover:bg-gray-50 transition">장바구니 담기</button>
+                            <button onClick={handleBuy} className="flex-1 bg-gray-900 text-white text-sm py-2 rounded hover:bg-gray-800 transition">구매하기</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── Home Page ───
+        function HomePage({ onNeedLogin }) {
+            const [products, setProducts] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                fetch(`${API}/products`).then(r => r.json()).then(d => { setProducts(d.products); setLoading(false); });
+            }, []);
+
+            if (loading) return <div className="max-w-6xl mx-auto px-4 py-16 text-center text-gray-400">로딩 중...</div>;
+
+            return (
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <h1 className="text-2xl font-bold mb-6">신발 컬렉션</h1>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {products.map(p => <ProductCard key={p.id} product={{...p, image: p.image_url}} onBuy={onNeedLogin} />)}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── Cart Page ───
+        function CartPage({ onNeedLogin }) {
+            const { user } = useContext(AuthContext);
+            const { items, removeItem, updateQty, placeOrder, total } = useContext(CartContext);
+            const [ordered, setOrdered] = useState(false);
+
+            useEffect(() => {
+                if (!user) onNeedLogin();
+            }, [user]);
+
+            if (!user) {
+                return (
+                    <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+                        <p className="text-gray-500">로그인이 필요합니다.</p>
+                        <button onClick={onNeedLogin} className="mt-4 underline text-gray-700">로그인하기</button>
+                    </div>
+                );
+            }
+
+            if (ordered) {
+                return (
+                    <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+                        <p className="text-2xl font-bold mb-2">주문이 완료되었습니다!</p>
+                        <p className="text-gray-500 mb-6">감사합니다.</p>
+                        <a href="#/" className="underline text-gray-700">쇼핑 계속하기</a>
+                    </div>
+                );
+            }
+
+            if (items.length === 0) {
+                return (
+                    <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+                        <p className="text-gray-500 mb-4">장바구니가 비어있습니다.</p>
+                        <a href="#/" className="underline text-gray-700">쇼핑하러 가기</a>
+                    </div>
+                );
+            }
+
+            const handleOrder = async () => {
+                const ok = await placeOrder();
+                if (ok) setOrdered(true);
+            };
+
+            return (
+                <div className="max-w-3xl mx-auto px-4 py-8">
+                    <h1 className="text-2xl font-bold mb-6">장바구니</h1>
+                    <div className="space-y-4">
+                        {items.map(item => (
+                            <div key={item.product_id} className="flex items-center gap-4 border border-gray-200 rounded-lg p-4">
+                                <img src={item.image_url} alt={item.name} className="w-20 h-20 object-contain rounded bg-gray-100 p-1" />
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-sm">{item.name}</h3>
+                                    <p className="text-sm text-gray-600">{fmt(item.price)}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => updateQty(item.product_id, item.quantity - 1)} disabled={item.quantity <= 1} className="w-8 h-8 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-30">−</button>
+                                    <span className="w-8 text-center text-sm">{item.quantity}</span>
+                                    <button onClick={() => updateQty(item.product_id, item.quantity + 1)} className="w-8 h-8 border border-gray-300 rounded text-sm hover:bg-gray-50">+</button>
+                                </div>
+                                <p className="font-bold text-sm w-24 text-right">{fmt(item.price * item.quantity)}</p>
+                                <button onClick={() => removeItem(item.product_id)} className="text-gray-400 hover:text-gray-700 text-lg">✕</button>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-6 border-t border-gray-200 pt-6 flex items-center justify-between">
+                        <p className="text-lg">합계: <span className="font-bold text-xl">{fmt(total)}</span></p>
+                        <button onClick={handleOrder} className="bg-gray-900 text-white px-6 py-2 rounded text-sm hover:bg-gray-800 transition">주문하기</button>
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── Router ───
+        function useHash() {
+            const [hash, setHash] = useState(window.location.hash || '#/');
+            useEffect(() => {
+                const handler = () => setHash(window.location.hash || '#/');
+                window.addEventListener('hashchange', handler);
+                return () => window.removeEventListener('hashchange', handler);
+            }, []);
+            return hash;
+        }
+
+        // ─── App ───
+        function App() {
+            const hash = useHash();
+            const [modal, setModal] = useState(null); // 'login' | 'register' | null
+
+            const openLogin = useCallback(() => setModal('login'), []);
+            const openRegister = useCallback(() => setModal('register'), []);
+            const closeModal = useCallback(() => setModal(null), []);
+
+            let page;
+            if (hash === '#/cart') {
+                page = <CartPage onNeedLogin={openLogin} />;
+            } else {
+                page = <HomePage onNeedLogin={openLogin} />;
+            }
+
+            return (
+                <>
+                    <Navbar onLoginClick={openLogin} />
+                    {page}
+                    <LoginModal open={modal === 'login'} onClose={closeModal} onSwitchToRegister={openRegister} />
+                    <RegisterModal open={modal === 'register'} onClose={closeModal} onSwitchToLogin={openLogin} />
+                </>
+            );
+        }
+
+        // ─── Mount ───
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(
+            <AuthProvider>
+                <CartProvider>
+                    <App />
+                </CartProvider>
+            </AuthProvider>
+        );
+    </script>
+</body>
+</html>
