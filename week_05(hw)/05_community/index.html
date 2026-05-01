@@ -42,6 +42,35 @@
     .nav-user {
       font-size: 14px;
       color: #555;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 아바타 */
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .avatar-sm {
+      width: 28px;
+      height: 28px;
+      font-size: 11px;
+    }
+
+    .avatar-lg {
+      width: 36px;
+      height: 36px;
+      font-size: 14px;
     }
 
     .nav-btn {
@@ -175,6 +204,14 @@
       padding: 16px 20px;
       cursor: pointer;
       transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .post-item-body {
+      flex: 1;
+      min-width: 0;
     }
 
     .post-item:hover { background: #fafafa; }
@@ -237,7 +274,8 @@
 
     .detail-meta-left {
       display: flex;
-      gap: 12px;
+      align-items: center;
+      gap: 10px;
     }
 
     .detail-actions {
@@ -423,7 +461,7 @@
       const nav = document.getElementById('nav-right');
       if (currentUser) {
         nav.innerHTML = `
-          <span class="nav-user">${currentUser.username}</span>
+          <span class="nav-user">${avatar(currentUser.username, 'sm')} ${currentUser.username}</span>
           <button class="nav-btn" onclick="logout()">로그아웃</button>
         `;
         document.getElementById('write-btn').style.display = '';
@@ -538,10 +576,13 @@
 
         listEl.innerHTML = '<div class="post-list">' + data.posts.map(p => `
           <div class="post-item" onclick="goDetail(${p.id})">
-            <div class="post-item-title">${esc(p.title)}</div>
-            <div class="post-item-meta">
-              <span>${esc(p.author)}</span>
-              <span>${formatDate(p.created_at)}</span>
+            ${avatar(p.author)}
+            <div class="post-item-body">
+              <div class="post-item-title">${esc(p.title)}</div>
+              <div class="post-item-meta">
+                <span>${esc(p.author)}</span>
+                <span>${formatDate(p.created_at)}</span>
+              </div>
             </div>
           </div>
         `).join('') + '</div>';
@@ -570,6 +611,7 @@
           <div class="detail-title">${esc(p.title)}</div>
           <div class="detail-meta">
             <div class="detail-meta-left">
+              ${avatar(p.author, 'lg')}
               <span>${esc(p.author)}</span>
               <span>${formatDate(p.created_at)}</span>
             </div>
@@ -650,6 +692,19 @@
       } catch (err) {
         alert('서버 오류');
       }
+    }
+
+    // 아바타 생성
+    const AVATAR_COLORS = ['#e53935','#8e24aa','#1e88e5','#00897b','#ef6c00','#3949ab','#c62828','#00695c','#6a1b9a','#2e7d32'];
+    function avatarColor(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    }
+    function avatar(name, size = '') {
+      const cls = size ? `avatar avatar-${size}` : 'avatar';
+      const initial = name.charAt(0);
+      return `<div class="${cls}" style="background:${avatarColor(name)}">${esc(initial)}</div>`;
     }
 
     // HTML 이스케이프
