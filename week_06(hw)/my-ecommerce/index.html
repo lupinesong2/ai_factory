@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>흙담 — 수공예 도자기</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#8B7355',
+              accent: '#8BA888',
+              bg: '#FAF8F5',
+              text: '#3D3425',
+              light: '#C4B69C',
+              cream: '#F5F0E8',
+            }
+          },
+          fontFamily: {
+            sans: ['"Pretendard"', 'system-ui', '-apple-system', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://js.tosspayments.com/v2/standard"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #FAF8F5; color: #3D3425; }
+    .font-serif-kr { font-family: 'Noto Serif KR', serif; }
+    .hero-overlay {
+      background: linear-gradient(to right, rgba(61,52,37,0.7) 0%, rgba(61,52,37,0.3) 60%, transparent 100%);
+    }
+    .card-hover { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(61,52,37,0.12); }
+    .fade-in { animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    // ========================================
+    // 1. React Hooks Destructuring
+    // ========================================
+    const { useState, useEffect, useContext, createContext, useMemo, useCallback } = React;
+
+    // ========================================
+    // 2. Data
+    // ========================================
+    const PRODUCTS = [
+      { id: 1, name: "청자 밥공기 세트", desc: "은은한 비색이 아름다운 3인 밥공기 세트", price: 89000, category: "그릇", image: "https://ik.imagekit.io/5ts6h6cfu/heukdam-products/bowl-set_SDPm8OaCU.jpg" },
+      { id: 2, name: "분청 찻잔", desc: "분청사기 기법의 우아한 찻잔과 받침", price: 45000, category: "컵/잔", image: "https://ik.imagekit.io/5ts6h6cfu/heukdam-products/tea-cup_lSiPLQoUZ.jpg" },
+      { id: 3, name: "재유 대접시", desc: "자연 잿물 유약의 대형 디너 접시", price: 67000, category: "접시", image: "https://ik.imagekit.io/5ts6h6cfu/heukdam-products/plate-large_4gSbZOQ0N.jpg" },
+      { id: 4, name: "백자 달항아리", desc: "조선 백자의 전통을 잇는 달항아리 화병", price: 320000, category: "화병", image: "https://ik.imagekit.io/5ts6h6cfu/heukdam-products/vase_lyktWETTR.jpg" },
+      { id: 5, name: "옹기 커피머그", desc: "옹기 토양의 따뜻한 질감이 느껴지는 머그", price: 35000, category: "컵/잔", image: "https://ik.imagekit.io/5ts6h6cfu/heukdam-products/mug_Z1BKTZXQx.jpg" },
+      { id: 6, name: "청자 국그릇", desc: "깊이감 있는 비색 청자 국그릇", price: 42000, category: "그릇", image: "https://ik.imagekit.io/5ts6h6cfu/heukdam-products/bowl-set_SDPm8OaCU.jpg" },
+    ];
+
+    const formatPrice = (price) => price.toLocaleString('ko-KR') + '원';
+
+    // ========================================
+    // 2b. ImageKit Helper
+    // ========================================
+    const IMAGEKIT_URL = 'https://ik.imagekit.io/5ts6h6cfu';
+    const getImageUrl = (path, transforms = '') => {
+      if (path.startsWith('http')) return path;
+      const tr = transforms ? `tr:${transforms}/` : '';
+      return `${IMAGEKIT_URL}/${tr}${path}`;
+    };
+
+    // ========================================
+    // 3. Auth Context
+    // ========================================
+    const AuthContext = createContext();
+
+    function AuthProvider({ children }) {
+      const [user, setUser] = useState(null);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+          fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+            .then(res => res.ok ? res.json() : Promise.reject())
+            .then(data => setUser(data.data.user))
+            .catch(() => localStorage.removeItem('token'))
+            .finally(() => setLoading(false));
+        } else {
+          setLoading(false);
+        }
+      }, []);
+
+      const login = useCallback(async (email, password) => {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        localStorage.setItem('token', data.data.token);
+        setUser(data.data.user);
+        return data.data.user;
+      }, []);
+
+      const signup = useCallback(async (email, password, name) => {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        localStorage.setItem('token', data.data.token);
+        setUser(data.data.user);
+        return data.data.user;
+      }, []);
+
+      const logout = useCallback(() => {
+        localStorage.removeItem('token');
+        setUser(null);
+        window.location.hash = '/';
+      }, []);
+
+      return (
+        <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+          {children}
+        </AuthContext.Provider>
+      );
+    }
+
+    function useAuth() { return useContext(AuthContext); }
+
+    // ========================================
+    // 3b. Cart Context
+    // ========================================
+    const CartContext = createContext();
+
+    function CartProvider({ children }) {
+      const [items, setItems] = useState([]);
+
+      const addToCart = useCallback((product, quantity = 1) => {
+        setItems(prev => {
+          const existing = prev.find(item => item.id === product.id);
+          if (existing) {
+            return prev.map(item =>
+              item.id === product.id
+                ? { ...item, quantity: item.quantity + quantity }
+                : item
+            );
+          }
+          return [...prev, { ...product, quantity }];
+        });
+      }, []);
+
+      const removeFromCart = useCallback((id) => {
+        setItems(prev => prev.filter(item => item.id !== id));
+      }, []);
+
+      const updateQuantity = useCallback((id, quantity) => {
+        if (quantity < 1) return;
+        setItems(prev => prev.map(item =>
+          item.id === id ? { ...item, quantity } : item
+        ));
+      }, []);
+
+      const clearCart = useCallback(() => setItems([]), []);
+
+      const totalCount = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
+      const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.price * item.quantity, 0), [items]);
+
+      return (
+        <CartContext.Provider value={{ items, addToCart, removeFromCart, updateQuantity, clearCart, totalCount, subtotal }}>
+          {children}
+        </CartContext.Provider>
+      );
+    }
+
+    function useCart() {
+      return useContext(CartContext);
+    }
+
+    // ========================================
+    // 4. Router
+    // ========================================
+    const RouterContext = createContext();
+
+    function Router({ children }) {
+      const [path, setPath] = useState(window.location.hash.slice(1) || '/');
+
+      useEffect(() => {
+        const handleHash = () => setPath(window.location.hash.slice(1) || '/');
+        window.addEventListener('hashchange', handleHash);
+        return () => window.removeEventListener('hashchange', handleHash);
+      }, []);
+
+      const navigate = useCallback((to) => { window.location.hash = to; }, []);
+
+      return (
+        <RouterContext.Provider value={{ path, navigate }}>
+          {children}
+        </RouterContext.Provider>
+      );
+    }
+
+    function useRouter() { return useContext(RouterContext); }
+
+    function matchRoute(pattern, path) {
+      const patternParts = pattern.split('/');
+      const pathParts = path.split('/');
+      if (patternParts.length !== pathParts.length) return null;
+      const params = {};
+      for (let i = 0; i < patternParts.length; i++) {
+        if (patternParts[i].startsWith(':')) {
+          params[patternParts[i].slice(1)] = pathParts[i];
+        } else if (patternParts[i] !== pathParts[i]) {
+          return null;
+        }
+      }
+      return params;
+    }
+
+    function Link({ to, children, className, onClick }) {
+      const handleClick = (e) => {
+        e.preventDefault();
+        if (onClick) onClick();
+        window.location.hash = to;
+      };
+      return <a href={`#${to}`} className={className} onClick={handleClick}>{children}</a>;
+    }
+
+    // ========================================
+    // 5. Design System Components
+    // ========================================
+    function Button({ children, variant = 'primary', size = 'md', className = '', onClick, disabled }) {
+      const base = 'inline-flex items-center justify-center font-medium transition-all duration-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary/30';
+      const variants = {
+        primary: 'bg-brand-primary text-white hover:bg-brand-primary/90 active:bg-brand-primary/80',
+        secondary: 'bg-brand-cream text-brand-text border border-brand-light hover:bg-brand-light/30',
+        ghost: 'text-brand-primary hover:bg-brand-cream',
+        accent: 'bg-brand-accent text-white hover:bg-brand-accent/90',
+      };
+      const sizes = {
+        sm: 'px-3 py-1.5 text-sm',
+        md: 'px-5 py-2.5 text-sm',
+        lg: 'px-8 py-3.5 text-base',
+      };
+      return (
+        <button
+          className={`${base} ${variants[variant]} ${sizes[size]} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${className}`}
+          onClick={onClick}
+          disabled={disabled}
+        >
+          {children}
+        </button>
+      );
+    }
+
+    function Input({ label, type = 'text', value, onChange, placeholder, error, disabled }) {
+      return (
+        <div>
+          {label && <label className="block text-sm font-medium text-brand-text mb-1.5">{label}</label>}
+          <input
+            type={type}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            disabled={disabled}
+            className={`w-full px-4 py-2.5 text-sm border rounded-md bg-white text-brand-text placeholder-brand-text/40 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary ${
+              error ? 'border-red-400' : 'border-brand-light'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          />
+          {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+        </div>
+      );
+    }
+
+    function Card({ children, className = '', hover = true }) {
+      return (
+        <div className={`bg-white rounded-lg overflow-hidden ${hover ? 'card-hover' : ''} ${className}`}>
+          {children}
+        </div>
+      );
+    }
+
+    function Badge({ children, className = '' }) {
+      return (
+        <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold rounded-full bg-brand-accent text-white ${className}`}>
+          {children}
+        </span>
+      );
+    }
+
+    function QuantitySelector({ value, onChange, size = 'md' }) {
+      const btnSize = size === 'sm' ? 'w-7 h-7 text-sm' : 'w-9 h-9 text-base';
+      const textSize = size === 'sm' ? 'w-8 text-sm' : 'w-12 text-base';
+      return (
+        <div className="inline-flex items-center border border-brand-light rounded-md overflow-hidden">
+          <button
+            className={`${btnSize} flex items-center justify-center hover:bg-brand-cream transition-colors text-brand-text`}
+            onClick={() => onChange(Math.max(1, value - 1))}
+            aria-label="수량 감소"
+          >−</button>
+          <span className={`${textSize} text-center font-medium text-brand-text`}>{value}</span>
+          <button
+            className={`${btnSize} flex items-center justify-center hover:bg-brand-cream transition-colors text-brand-text`}
+            onClick={() => onChange(value + 1)}
+            aria-label="수량 증가"
+          >+</button>
+        </div>
+      );
+    }
+
+    // ========================================
+    // 6. Common/Layout Components
+    // ========================================
+    function Header() {
+      const { totalCount } = useCart();
+      const { user, logout } = useAuth();
+      const { path } = useRouter();
+      const [mobileOpen, setMobileOpen] = useState(false);
+
+      const navLinks = [
+        { to: '/', label: '홈' },
+        { to: '/shop', label: '상점' },
+        { to: '/cart', label: '장바구니' },
+        { to: '/admin/images', label: '이미지 관리' },
+      ];
+
+      const isActive = (to) => {
+        if (to === '/') return path === '/';
+        return path.startsWith(to);
+      };
+
+      return (
+        <header className="sticky top-0 z-50 bg-brand-bg/95 backdrop-blur-sm border-b border-brand-light/30">
+          <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <Link to="/" className="font-serif-kr text-2xl font-bold text-brand-text tracking-wide hover:text-brand-primary transition-colors">
+              흙담
+            </Link>
+
+            <nav className="hidden md:flex items-center gap-8" aria-label="주요 메뉴">
+              {navLinks.map(link => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={`text-sm tracking-wide transition-colors relative ${
+                    isActive(link.to) ? 'text-brand-primary font-semibold' : 'text-brand-text/70 hover:text-brand-text'
+                  }`}
+                >
+                  {link.label}
+                  {link.to === '/cart' && totalCount > 0 && (
+                    <Badge className="absolute -top-2 -right-5">{totalCount}</Badge>
+                  )}
+                </Link>
+              ))}
+
+              {/* Auth */}
+              {user ? (
+                <div className="flex items-center gap-3 ml-2">
+                  <Link to="/orders" className={`text-sm tracking-wide transition-colors ${
+                    path === '/orders' ? 'text-brand-primary font-semibold' : 'text-brand-text/70 hover:text-brand-text'
+                  }`}>주문내역</Link>
+                  <span className="text-sm text-brand-text/70">{user.name}님</span>
+                  <button onClick={logout} className="text-sm text-brand-text/50 hover:text-brand-primary transition-colors">
+                    로그아웃
+                  </button>
+                </div>
+              ) : (
+                <Link to="/login" className={`text-sm tracking-wide transition-colors ${
+                  path === '/login' || path === '/signup' ? 'text-brand-primary font-semibold' : 'text-brand-text/70 hover:text-brand-text'
+                }`}>
+                  로그인
+                </Link>
+              )}
+            </nav>
+
+            <button
+              className="md:hidden relative p-2 text-brand-text"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="메뉴 열기"
+            >
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                {mobileOpen
+                  ? <><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></>
+                  : <><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></>
+                }
+              </svg>
+              {totalCount > 0 && <Badge className="absolute -top-0.5 -right-0.5">{totalCount}</Badge>}
+            </button>
+          </div>
+
+          {mobileOpen && (
+            <nav className="md:hidden border-t border-brand-light/30 bg-brand-bg px-4 py-3 space-y-1 fade-in">
+              {navLinks.map(link => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={`block py-2 px-3 rounded-md text-sm ${
+                    isActive(link.to) ? 'bg-brand-cream text-brand-primary font-semibold' : 'text-brand-text/70'
+                  }`}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                  {link.to === '/cart' && totalCount > 0 && ` (${totalCount})`}
+                </Link>
+              ))}
+              {user ? (
+                <>
+                  <div className="py-2 px-3 text-sm text-brand-text/70">{user.name}님</div>
+                  <button onClick={() => { logout(); setMobileOpen(false); }} className="block w-full text-left py-2 px-3 rounded-md text-sm text-brand-text/70 hover:bg-brand-cream">
+                    로그아웃
+                  </button>
+                </>
+              ) : (
+                <Link to="/login" className="block py-2 px-3 rounded-md text-sm text-brand-text/70" onClick={() => setMobileOpen(false)}>
+                  로그인
+                </Link>
+              )}
+            </nav>
+          )}
+        </header>
+      );
+    }
+
+    function Footer() {
+      return (
+        <footer className="bg-brand-text text-brand-cream/70 mt-20">
+          <div className="max-w-6xl mx-auto px-4 py-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div>
+                <h3 className="font-serif-kr text-xl font-bold text-white mb-3">흙담</h3>
+                <p className="text-sm leading-relaxed">
+                  전통과 현대가 만나는 곳.<br/>
+                  장인의 손끝에서 빚어진 도자기로<br/>
+                  일상에 아름다움을 더합니다.
+                </p>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold text-sm mb-3">고객 안내</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>배송 안내: 주문 후 3~7일 소요</li>
+                  <li>교환/반품: 수령 후 7일 이내</li>
+                  <li>5만원 이상 구매 시 무료 배송</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold text-sm mb-3">연락처</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>전화: 02-1234-5678</li>
+                  <li>이메일: hello@heukdam.kr</li>
+                  <li>영업시간: 평일 10:00 ~ 18:00</li>
+                </ul>
+              </div>
+            </div>
+            <div className="border-t border-white/10 mt-8 pt-6 text-center text-xs text-brand-cream/40">
+              &copy; 2026 흙담. All rights reserved.
+            </div>
+          </div>
+        </footer>
+      );
+    }
+
+    function ProductCard({ product, compact = false }) {
+      const { addToCart } = useCart();
+      const [added, setAdded] = useState(false);
+
+      const handleAdd = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        addToCart(product);
+        setAdded(true);
+        setTimeout(() => setAdded(false), 1200);
+      };
+
+      return (
+        <Link to={`/product/${product.id}`} className="block h-full">
+          <Card className="group h-full flex flex-col">
+            <div className="relative overflow-hidden aspect-[4/5] bg-brand-cream">
+              <img
+                src={getImageUrl(product.image)}
+                alt={product.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+              />
+              {!compact && (
+                <div className="absolute inset-0 bg-brand-text/0 group-hover:bg-brand-text/10 transition-colors duration-300" />
+              )}
+            </div>
+            <div className={`flex flex-col flex-1 ${compact ? 'p-3' : 'p-4'}`}>
+              <h3 className={`font-serif-kr font-semibold text-brand-text ${compact ? 'text-sm' : 'text-base'}`}>
+                {product.name}
+              </h3>
+              {!compact && (
+                <p className="text-sm text-brand-text/60 mt-1 line-clamp-2">{product.desc}</p>
+              )}
+              <div className={`flex items-center justify-between mt-auto ${compact ? 'pt-2' : 'pt-3'}`}>
+                <span className={`font-semibold text-brand-primary ${compact ? 'text-sm' : 'text-base'}`}>
+                  {formatPrice(product.price)}
+                </span>
+                {!compact && (
+                  <Button
+                    variant={added ? 'accent' : 'secondary'}
+                    size="sm"
+                    onClick={handleAdd}
+                    className="text-xs"
+                  >
+                    {added ? '담았습니다' : '장바구니 담기'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </Link>
+      );
+    }
+
+    // ========================================
+    // 7. Page Components
+    // ========================================
+
+    // --- Home Page ---
+    function HomePage() {
+      const featured = PRODUCTS.slice(0, 4);
+
+      return (
+        <div className="fade-in">
+          {/* Hero */}
+          <section className="relative h-[70vh] min-h-[400px] max-h-[600px] overflow-hidden">
+            <img
+              src="https://ik.imagekit.io/5ts6h6cfu/heukdam-products/hero-banner_-2Kbyt47j.jpg"
+              alt="흙담 도자기 컬렉션"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="hero-overlay absolute inset-0" />
+            <div className="relative z-10 h-full flex items-center">
+              <div className="max-w-6xl mx-auto px-4 w-full">
+                <div className="max-w-lg">
+                  <h1 className="font-serif-kr text-3xl md:text-5xl font-bold text-white leading-tight">
+                    손끝에서 빚어낸<br/>아름다움
+                  </h1>
+                  <p className="mt-4 text-white/80 text-base md:text-lg leading-relaxed">
+                    장인의 정성이 담긴 수공예 도자기
+                  </p>
+                  <Link to="/shop" className="inline-block mt-8 px-8 py-3.5 bg-white text-brand-text font-medium text-base rounded-md hover:bg-brand-cream transition-colors shadow-lg">
+                    컬렉션 보기
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Featured Products */}
+          <section className="max-w-6xl mx-auto px-4 py-16 md:py-24">
+            <div className="text-center mb-12">
+              <h2 className="font-serif-kr text-2xl md:text-3xl font-bold text-brand-text">인기 상품</h2>
+              <p className="mt-2 text-brand-text/60 text-sm">가장 사랑받는 흙담의 도자기</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {featured.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+            <div className="text-center mt-10">
+              <Link to="/shop">
+                <Button variant="secondary" size="lg">전체 상품 보기</Button>
+              </Link>
+            </div>
+          </section>
+
+          {/* Brand Story */}
+          <section className="bg-brand-cream/50">
+            <div className="max-w-4xl mx-auto px-4 py-16 md:py-24 text-center">
+              <h2 className="font-serif-kr text-2xl md:text-3xl font-bold text-brand-text mb-6">브랜드 이야기</h2>
+              <div className="w-12 h-0.5 bg-brand-primary mx-auto mb-8" />
+              <p className="text-brand-text/70 leading-loose text-base md:text-lg max-w-2xl mx-auto">
+                흙담은 한국 전통 도자기의 아름다움을 현대의 일상으로 가져옵니다.
+                청자의 은은한 비색, 분청의 소박한 멋, 백자의 기품 있는 순백 —
+                수백 년 이어온 장인의 기법을 오늘날의 식탁 위에 담아냅니다.
+                흙과 불, 그리고 시간이 빚어낸 하나뿐인 그릇으로
+                당신의 매일을 조금 더 특별하게 만들어 보세요.
+              </p>
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    // --- Shop Page ---
+    function ShopPage() {
+      const CATEGORIES = ['전체', '그릇', '컵/잔', '접시', '화병'];
+      const [activeCategory, setActiveCategory] = useState('전체');
+
+      const filtered = activeCategory === '전체'
+        ? PRODUCTS
+        : PRODUCTS.filter(p => p.category === activeCategory);
+
+      return (
+        <div className="fade-in max-w-6xl mx-auto px-4 py-8 md:py-12">
+          <h1 className="font-serif-kr text-2xl md:text-3xl font-bold text-brand-text text-center">상품 목록</h1>
+          <p className="text-center text-brand-text/60 text-sm mt-2 mb-8">정성스럽게 빚은 도자기를 만나보세요</p>
+
+          {/* Category Tabs */}
+          <div className="flex justify-center gap-2 mb-10 flex-wrap">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-4 py-2 rounded-full text-sm transition-all duration-200 ${
+                  activeCategory === cat
+                    ? 'bg-brand-primary text-white shadow-sm'
+                    : 'bg-white text-brand-text/70 hover:bg-brand-cream border border-brand-light/50'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Product Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+            {filtered.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+
+          {filtered.length === 0 && (
+            <div className="text-center py-20 text-brand-text/50">
+              해당 카테고리에 상품이 없습니다.
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- Product Detail Page ---
+    function ProductDetailPage({ id }) {
+      const product = PRODUCTS.find(p => p.id === Number(id));
+      const { addToCart } = useCart();
+      const [quantity, setQuantity] = useState(1);
+      const [added, setAdded] = useState(false);
+
+      if (!product) {
+        return (
+          <div className="max-w-6xl mx-auto px-4 py-20 text-center">
+            <p className="text-brand-text/60 text-lg">상품을 찾을 수 없습니다.</p>
+            <Link to="/shop"><Button variant="secondary" className="mt-4">상점으로 돌아가기</Button></Link>
+          </div>
+        );
+      }
+
+      const related = PRODUCTS.filter(p => p.id !== product.id).slice(0, 3);
+
+      const handleAdd = () => {
+        addToCart(product, quantity);
+        setAdded(true);
+        setTimeout(() => setAdded(false), 1500);
+      };
+
+      return (
+        <div className="fade-in max-w-6xl mx-auto px-4 py-8 md:py-12">
+          {/* Breadcrumb */}
+          <nav className="text-sm text-brand-text/50 mb-6">
+            <Link to="/" className="hover:text-brand-primary">홈</Link>
+            <span className="mx-2">/</span>
+            <Link to="/shop" className="hover:text-brand-primary">상점</Link>
+            <span className="mx-2">/</span>
+            <span className="text-brand-text">{product.name}</span>
+          </nav>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+            {/* Image */}
+            <div className="aspect-square rounded-lg overflow-hidden bg-brand-cream">
+              <img src={getImageUrl(product.image)} alt={product.name} className="w-full h-full object-cover" />
+            </div>
+
+            {/* Info */}
+            <div className="flex flex-col justify-center">
+              <span className="text-xs text-brand-accent font-medium tracking-wider uppercase mb-2">{product.category}</span>
+              <h1 className="font-serif-kr text-2xl md:text-3xl font-bold text-brand-text">{product.name}</h1>
+              <p className="mt-3 text-brand-text/60 leading-relaxed">{product.desc}</p>
+
+              <div className="mt-6 pb-6 border-b border-brand-light/30">
+                <span className="text-2xl font-bold text-brand-primary">{formatPrice(product.price)}</span>
+              </div>
+
+              <div className="mt-6 flex items-center gap-4">
+                <span className="text-sm text-brand-text/70">수량</span>
+                <QuantitySelector value={quantity} onChange={setQuantity} />
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <Button
+                  variant={added ? 'accent' : 'primary'}
+                  size="lg"
+                  className="flex-1"
+                  onClick={handleAdd}
+                >
+                  {added ? '장바구니에 담았습니다' : '장바구니 담기'}
+                </Button>
+              </div>
+
+              <div className="mt-8 space-y-2 text-sm text-brand-text/50">
+                <p>무료 배송: 5만원 이상 구매 시</p>
+                <p>제작 기간: 주문 후 3~7일</p>
+                <p>수공예 제품으로 미세한 차이가 있을 수 있습니다</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Related Products */}
+          <section className="mt-16 md:mt-24">
+            <h2 className="font-serif-kr text-xl md:text-2xl font-bold text-brand-text mb-6">관련 상품</h2>
+            <div className="grid grid-cols-3 gap-4 md:gap-6">
+              {related.map(p => (
+                <ProductCard key={p.id} product={p} compact />
+              ))}
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    // --- Cart Page ---
+    function CartPage() {
+      const { items, removeFromCart, updateQuantity, subtotal } = useCart();
+      const { user } = useAuth();
+      const { navigate } = useRouter();
+      const shipping = subtotal >= 50000 ? 0 : 3000;
+      const total = subtotal + shipping;
+
+      const handleOrder = () => {
+        if (!user) { navigate('/login'); return; }
+        navigate('/checkout');
+      };
+
+      if (items.length === 0) {
+        return (
+          <div className="fade-in max-w-6xl mx-auto px-4 py-20 text-center">
+            <div className="text-6xl mb-4 opacity-30">🏺</div>
+            <h1 className="font-serif-kr text-2xl font-bold text-brand-text">장바구니가 비어있습니다</h1>
+            <p className="mt-2 text-brand-text/60">마음에 드는 도자기를 담아보세요</p>
+            <Link to="/shop">
+              <Button variant="primary" size="lg" className="mt-6">상품 둘러보기</Button>
+            </Link>
+          </div>
+        );
+      }
+
+      return (
+        <div className="fade-in max-w-6xl mx-auto px-4 py-8 md:py-12">
+          <h1 className="font-serif-kr text-2xl md:text-3xl font-bold text-brand-text mb-8">장바구니</h1>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Cart Items */}
+            <div className="lg:col-span-2 space-y-4">
+              {items.map(item => (
+                <div key={item.id} className="bg-white rounded-lg p-4 flex gap-4 items-center">
+                  <Link to={`/product/${item.id}`} className="shrink-0">
+                    <img src={getImageUrl(item.image)} alt={item.name} className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-md" />
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <Link to={`/product/${item.id}`}>
+                      <h3 className="font-serif-kr font-semibold text-brand-text text-sm md:text-base truncate hover:text-brand-primary">
+                        {item.name}
+                      </h3>
+                    </Link>
+                    <p className="text-sm text-brand-text/60 mt-0.5">{formatPrice(item.price)}</p>
+                    <div className="mt-2 flex items-center gap-3">
+                      <QuantitySelector
+                        value={item.quantity}
+                        onChange={(val) => updateQuantity(item.id, val)}
+                        size="sm"
+                      />
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-xs text-brand-text/40 hover:text-red-500 transition-colors ml-auto"
+                        aria-label="삭제"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-semibold text-brand-primary text-sm md:text-base">
+                      {formatPrice(item.price * item.quantity)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Order Summary */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg p-6 sticky top-24">
+                <h2 className="font-serif-kr text-lg font-bold text-brand-text mb-4">주문 요약</h2>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between text-brand-text/70">
+                    <span>상품 합계</span>
+                    <span>{formatPrice(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-brand-text/70">
+                    <span>배송비</span>
+                    <span>{shipping === 0 ? '무료' : formatPrice(shipping)}</span>
+                  </div>
+                  {shipping > 0 && (
+                    <p className="text-xs text-brand-accent">
+                      {formatPrice(50000 - subtotal)} 더 구매 시 무료 배송
+                    </p>
+                  )}
+                  <div className="border-t border-brand-light/30 pt-3 flex justify-between font-bold text-brand-text">
+                    <span>총 결제금액</span>
+                    <span className="text-brand-primary text-lg">{formatPrice(total)}</span>
+                  </div>
+                </div>
+                <Button variant="primary" size="lg" className="w-full mt-6" onClick={handleOrder}>
+                  주문하기
+                </Button>
+                <Link to="/shop" className="block text-center mt-3 text-sm text-brand-text/50 hover:text-brand-primary transition-colors">
+                  쇼핑 계속하기
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- Login Page ---
+    function LoginPage() {
+      const { login } = useAuth();
+      const { navigate } = useRouter();
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+          await login(email, password);
+          navigate('/');
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="fade-in max-w-md mx-auto px-4 py-16">
+          <div className="text-center mb-8">
+            <h1 className="font-serif-kr text-2xl font-bold text-brand-text">로그인</h1>
+            <p className="mt-2 text-sm text-brand-text/60">흙담에 오신 것을 환영합니다</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="bg-white rounded-lg p-6 shadow-sm space-y-4">
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-md">{error}</div>
+            )}
+
+            <Input
+              label="이메일"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@email.com"
+            />
+            <Input
+              label="비밀번호"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="비밀번호를 입력하세요"
+            />
+
+            <Button variant="primary" size="lg" className="w-full" onClick={handleSubmit} disabled={loading}>
+              {loading ? '로그인 중...' : '로그인'}
+            </Button>
+
+            <p className="text-center text-sm text-brand-text/60 pt-2">
+              아직 회원이 아니신가요?{' '}
+              <Link to="/signup" className="text-brand-primary font-medium hover:underline">회원가입</Link>
+            </p>
+          </form>
+        </div>
+      );
+    }
+
+    // --- Signup Page ---
+    function SignupPage() {
+      const { signup } = useAuth();
+      const { navigate } = useRouter();
+      const [name, setName] = useState('');
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [passwordConfirm, setPasswordConfirm] = useState('');
+      const [error, setError] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+
+        if (!name.trim()) return setError('이름을 입력해주세요.');
+        if (password.length < 6) return setError('비밀번호는 6자 이상이어야 합니다.');
+        if (password !== passwordConfirm) return setError('비밀번호가 일치하지 않습니다.');
+
+        setLoading(true);
+        try {
+          await signup(email, password, name);
+          navigate('/');
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="fade-in max-w-md mx-auto px-4 py-16">
+          <div className="text-center mb-8">
+            <h1 className="font-serif-kr text-2xl font-bold text-brand-text">회원가입</h1>
+            <p className="mt-2 text-sm text-brand-text/60">흙담의 회원이 되어보세요</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="bg-white rounded-lg p-6 shadow-sm space-y-4">
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-md">{error}</div>
+            )}
+
+            <Input
+              label="이름"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="홍길동"
+            />
+            <Input
+              label="이메일"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@email.com"
+            />
+            <Input
+              label="비밀번호"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="6자 이상"
+            />
+            <Input
+              label="비밀번호 확인"
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              placeholder="비밀번호를 다시 입력하세요"
+            />
+
+            <Button variant="primary" size="lg" className="w-full" onClick={handleSubmit} disabled={loading}>
+              {loading ? '가입 중...' : '회원가입'}
+            </Button>
+
+            <p className="text-center text-sm text-brand-text/60 pt-2">
+              이미 회원이신가요?{' '}
+              <Link to="/login" className="text-brand-primary font-medium hover:underline">로그인</Link>
+            </p>
+          </form>
+        </div>
+      );
+    }
+
+    // ========================================
+    // TossPayments 설정
+    // ========================================
+    const TOSS_CLIENT_KEY = 'test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm';
+
+    // Hash routing safe query parser
+    function parseHashQuery() {
+      const params = new URLSearchParams();
+      const search = new URLSearchParams(window.location.search);
+      search.forEach((v, k) => params.set(k, v));
+      const hash = window.location.hash;
+      const qi = hash.indexOf('?');
+      if (qi !== -1) {
+        const hs = new URLSearchParams(hash.slice(qi + 1));
+        hs.forEach((v, k) => params.set(k, v));
+      }
+      return params;
+    }
+
+    // --- Checkout Page ---
+    function CheckoutPage() {
+      const { user } = useAuth();
+      const { items, subtotal } = useCart();
+      const { navigate } = useRouter();
+      const [form, setForm] = useState({ name: user?.name || '', phone: '', address: '', addressDetail: '' });
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState('');
+      const widgetsRef = React.useRef(null);
+      const isRenderedRef = React.useRef(false);
+
+      const shipping = subtotal >= 50000 ? 0 : 3000;
+      const total = subtotal + shipping;
+
+      if (!user) { navigate('/login'); return null; }
+      if (items.length === 0) { navigate('/cart'); return null; }
+
+      const updateForm = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+
+      // 토스 위젯 초기화
+      useEffect(() => {
+        if (!total || total <= 0) return;
+        const init = async () => {
+          try {
+            const tp = TossPayments(TOSS_CLIENT_KEY);
+            const w = tp.widgets({ customerKey: `user-${user.id}` });
+            widgetsRef.current = w;
+            await w.setAmount({ currency: 'KRW', value: total });
+            if (!isRenderedRef.current) {
+              await w.renderPaymentMethods({ selector: '#payment-method', variantKey: 'DEFAULT' });
+              await w.renderAgreement({ selector: '#agreement', variantKey: 'AGREEMENT' });
+              isRenderedRef.current = true;
+            }
+          } catch (e) { console.error('Widget init error:', e); }
+        };
+        init();
+      }, [total, user.id]);
+
+      // 금액 변경 시 setAmount만 호출
+      useEffect(() => {
+        if (widgetsRef.current && isRenderedRef.current && total > 0) {
+          widgetsRef.current.setAmount({ currency: 'KRW', value: total });
+        }
+      }, [total]);
+
+      const handleSubmit = async () => {
+        setError('');
+
+        if (!form.name.trim() || !form.phone.trim() || !form.address.trim()) {
+          return setError('배송 정보를 모두 입력해주세요.');
+        }
+
+        setLoading(true);
+        try {
+          // 1. 주문 생성 (status: pending)
+          const token = localStorage.getItem('token');
+          const orderItems = items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, image: i.image }));
+          const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ items: orderItems, subtotal, shipping, total, ...form }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message);
+
+          const orderUid = data.data.order.order_uid;
+          const orderName = items.length === 1 ? items[0].name : `${items[0].name} 외 ${items.length - 1}건`;
+          const origin = window.location.origin;
+
+          // 2. 토스 결제 요청
+          await widgetsRef.current.requestPayment({
+            orderId: orderUid,
+            orderName,
+            successUrl: `${origin}/#/payment-success`,
+            failUrl: `${origin}/#/payment-fail`,
+            customerEmail: user.email,
+            customerName: form.name,
+            customerMobilePhone: form.phone.replace(/-/g, ''),
+          });
+        } catch (err) {
+          if (err.code === 'USER_CANCEL') {
+            setError('결제가 취소되었습니다.');
+          } else if (err.message) {
+            setError(err.message);
+          }
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="fade-in max-w-4xl mx-auto px-4 py-8 md:py-12">
+          <h1 className="font-serif-kr text-2xl md:text-3xl font-bold text-brand-text mb-8">결제하기</h1>
+
+          {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-md mb-6">{error}</div>}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              {/* 배송 정보 */}
+              <div className="bg-white rounded-lg p-6">
+                <h2 className="font-serif-kr text-lg font-bold text-brand-text mb-4">배송 정보</h2>
+                <div className="space-y-4">
+                  <Input label="수령인" value={form.name} onChange={(e) => updateForm('name', e.target.value)} placeholder="이름" />
+                  <Input label="연락처" type="tel" value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} placeholder="010-0000-0000" />
+                  <Input label="주소" value={form.address} onChange={(e) => updateForm('address', e.target.value)} placeholder="도로명 주소" />
+                  <Input label="상세주소" value={form.addressDetail} onChange={(e) => updateForm('addressDetail', e.target.value)} placeholder="동/호수" />
+                </div>
+              </div>
+
+              {/* 토스 결제 수단 위젯 */}
+              <div className="bg-white rounded-lg p-6">
+                <h2 className="font-serif-kr text-lg font-bold text-brand-text mb-4">결제 수단</h2>
+                <div id="payment-method"></div>
+              </div>
+
+              {/* 토스 약관 동의 위젯 */}
+              <div className="bg-white rounded-lg p-6">
+                <div id="agreement"></div>
+              </div>
+
+              {/* 주문 상품 */}
+              <div className="bg-white rounded-lg p-6">
+                <h2 className="font-serif-kr text-lg font-bold text-brand-text mb-4">주문 상품 ({items.length})</h2>
+                <div className="space-y-3">
+                  {items.map(item => (
+                    <div key={item.id} className="flex items-center gap-3">
+                      <img src={getImageUrl(item.image)} alt={item.name} className="w-14 h-14 object-cover rounded" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-brand-text truncate">{item.name}</p>
+                        <p className="text-xs text-brand-text/50">수량: {item.quantity}</p>
+                      </div>
+                      <span className="text-sm font-semibold text-brand-primary shrink-0">{formatPrice(item.price * item.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 결제 요약 */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg p-6 sticky top-24">
+                <h2 className="font-serif-kr text-lg font-bold text-brand-text mb-4">결제 금액</h2>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between text-brand-text/70">
+                    <span>상품 합계</span><span>{formatPrice(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-brand-text/70">
+                    <span>배송비</span><span>{shipping === 0 ? '무료' : formatPrice(shipping)}</span>
+                  </div>
+                  <div className="border-t border-brand-light/30 pt-3 flex justify-between font-bold text-brand-text">
+                    <span>총 결제금액</span>
+                    <span className="text-brand-primary text-lg">{formatPrice(total)}</span>
+                  </div>
+                </div>
+                <Button variant="primary" size="lg" className="w-full mt-6" onClick={handleSubmit} disabled={loading}>
+                  {loading ? '결제 처리 중...' : `${formatPrice(total)} 결제하기`}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- Payment Success Page (토스 리다이렉트 후 승인 처리) ---
+    function PaymentSuccessPage() {
+      const { clearCart } = useCart();
+      const { navigate } = useRouter();
+      const [status, setStatus] = useState('confirming'); // confirming | success | error
+      const [error, setError] = useState('');
+      const [orderId, setOrderId] = useState('');
+      const confirmedRef = React.useRef(false);
+
+      useEffect(() => {
+        if (confirmedRef.current) return;
+        confirmedRef.current = true;
+
+        const query = parseHashQuery();
+        const paymentKey = query.get('paymentKey');
+        const qOrderId = query.get('orderId');
+        const amount = query.get('amount');
+
+        if (!paymentKey || !qOrderId || !amount) {
+          setStatus('error');
+          setError('결제 정보가 올바르지 않습니다.');
+          return;
+        }
+
+        fetch('/api/payments/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentKey, orderId: qOrderId, amount: Number(amount) }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setOrderId(data.data.orderUid || qOrderId);
+              setStatus('success');
+              clearCart();
+              // URL에서 결제 파라미터 제거
+              const cleanUrl = window.location.pathname + window.location.hash.split('?')[0];
+              window.history.replaceState({}, '', cleanUrl);
+            } else {
+              setStatus('error');
+              setError(data.message || '결제 승인에 실패했습니다.');
+            }
+          })
+          .catch(() => {
+            setStatus('error');
+            setError('결제 승인 요청 중 오류가 발생했습니다.');
+          });
+      }, [clearCart]);
+
+      if (status === 'confirming') {
+        return (
+          <div className="text-center py-20">
+            <svg className="animate-spin h-10 w-10 mx-auto mb-4 text-brand-primary" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <p className="text-brand-text/70 font-medium">결제를 승인하고 있습니다...</p>
+          </div>
+        );
+      }
+
+      if (status === 'error') {
+        return (
+          <div className="fade-in max-w-lg mx-auto px-4 py-20 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h1 className="font-serif-kr text-2xl font-bold text-brand-text">결제에 실패했습니다</h1>
+            <p className="mt-3 text-red-600 text-sm">{error}</p>
+            <div className="mt-8 flex gap-3 justify-center">
+              <Link to="/cart"><Button variant="secondary">장바구니로 돌아가기</Button></Link>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="fade-in max-w-lg mx-auto px-4 py-20 text-center">
+          <div className="w-16 h-16 bg-brand-accent/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="font-serif-kr text-2xl font-bold text-brand-text">결제가 완료되었습니다</h1>
+          <p className="mt-3 text-brand-text/60">주문번호: <span className="font-semibold text-brand-primary">{orderId}</span></p>
+          <p className="mt-1 text-sm text-brand-text/50">주문 내역은 마이페이지에서 확인하실 수 있습니다.</p>
+          <div className="mt-8 flex gap-3 justify-center">
+            <Link to="/orders"><Button variant="secondary">주문 내역 보기</Button></Link>
+            <Link to="/shop"><Button variant="primary">쇼핑 계속하기</Button></Link>
+          </div>
+        </div>
+      );
+    }
+
+    // --- Payment Fail Page ---
+    function PaymentFailPage() {
+      const query = parseHashQuery();
+      const code = query.get('code') || '';
+      const message = query.get('message') || '결제에 실패했습니다.';
+
+      return (
+        <div className="fade-in max-w-lg mx-auto px-4 py-20 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h1 className="font-serif-kr text-2xl font-bold text-brand-text">결제에 실패했습니다</h1>
+          <p className="mt-3 text-brand-text/60">{message}</p>
+          {code && <p className="mt-1 text-xs text-brand-text/40">오류 코드: {code}</p>}
+          <div className="mt-8 flex gap-3 justify-center">
+            <Link to="/cart"><Button variant="secondary">장바구니로 돌아가기</Button></Link>
+            <Link to="/shop"><Button variant="primary">쇼핑 계속하기</Button></Link>
+          </div>
+        </div>
+      );
+    }
+
+    // --- Order Complete Page (legacy, redirect) ---
+    function OrderCompletePage({ orderId }) {
+      const { clearCart } = useCart();
+
+      useEffect(() => { clearCart(); }, []);
+
+      return (
+        <div className="fade-in max-w-lg mx-auto px-4 py-20 text-center">
+          <div className="w-16 h-16 bg-brand-accent/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="font-serif-kr text-2xl font-bold text-brand-text">주문이 완료되었습니다</h1>
+          <p className="mt-3 text-brand-text/60">주문번호: <span className="font-semibold text-brand-primary">#{orderId}</span></p>
+          <p className="mt-1 text-sm text-brand-text/50">주문 내역은 마이페이지에서 확인하실 수 있습니다.</p>
+          <div className="mt-8 flex gap-3 justify-center">
+            <Link to="/orders"><Button variant="secondary">주문 내역 보기</Button></Link>
+            <Link to="/shop"><Button variant="primary">쇼핑 계속하기</Button></Link>
+          </div>
+        </div>
+      );
+    }
+
+    // --- Orders Page ---
+    function OrdersPage() {
+      const { user } = useAuth();
+      const { navigate } = useRouter();
+      const [orders, setOrders] = useState([]);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        if (!user) { navigate('/login'); return; }
+        const token = localStorage.getItem('token');
+        fetch('/api/orders', { headers: { Authorization: `Bearer ${token}` } })
+          .then(res => res.json())
+          .then(data => setOrders(data.data || []))
+          .catch(() => {})
+          .finally(() => setLoading(false));
+      }, [user, navigate]);
+
+      const statusLabels = {
+        paid: { text: '결제완료', color: 'bg-blue-100 text-blue-700' },
+        shipping: { text: '배송중', color: 'bg-yellow-100 text-yellow-700' },
+        delivered: { text: '배송완료', color: 'bg-green-100 text-green-700' },
+      };
+
+      if (loading) {
+        return <div className="text-center py-20 text-brand-text/50">주문 내역을 불러오는 중...</div>;
+      }
+
+      return (
+        <div className="fade-in max-w-4xl mx-auto px-4 py-8 md:py-12">
+          <h1 className="font-serif-kr text-2xl md:text-3xl font-bold text-brand-text mb-8">주문 내역</h1>
+
+          {orders.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-brand-text/50 mb-4">주문 내역이 없습니다.</p>
+              <Link to="/shop"><Button variant="primary">쇼핑하러 가기</Button></Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {orders.map(order => {
+                const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                const st = statusLabels[order.status] || statusLabels.paid;
+                return (
+                  <div key={order.id} className="bg-white rounded-lg p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <span className="text-sm font-semibold text-brand-text">주문 #{order.id}</span>
+                        <span className="text-xs text-brand-text/50 ml-3">
+                          {new Date(order.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </span>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${st.color}`}>{st.text}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {items.map((item, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <img src={getImageUrl(item.image)} alt={item.name} className="w-12 h-12 object-cover rounded" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-brand-text truncate">{item.name}</p>
+                            <p className="text-xs text-brand-text/50">수량: {item.quantity}</p>
+                          </div>
+                          <span className="text-sm text-brand-text/70">{formatPrice(item.price * item.quantity)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-brand-light/20 flex justify-between items-center">
+                      <span className="text-sm text-brand-text/60">{order.address}</span>
+                      <span className="font-bold text-brand-primary">{formatPrice(order.total)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- Image Management Page ---
+    function ImageManagePage() {
+      const [images, setImages] = useState([]);
+      const [uploading, setUploading] = useState(false);
+      const [loading, setLoading] = useState(true);
+      const [msg, setMsg] = useState('');
+
+      const fetchImages = async () => {
+        try {
+          const res = await fetch('/api/imagekit/images');
+          const data = await res.json();
+          if (data.success) setImages(data.data);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => { fetchImages(); }, []);
+
+      const handleUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        setMsg('');
+        try {
+          const formData = new FormData();
+          formData.append('image', file);
+          const res = await fetch('/api/imagekit/upload', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (data.success) {
+            setMsg(`업로드 완료: ${data.data.url}`);
+            fetchImages();
+          } else {
+            setMsg(data.message || '업로드 실패');
+          }
+        } catch (err) {
+          setMsg('업로드 중 오류 발생');
+        } finally {
+          setUploading(false);
+          e.target.value = '';
+        }
+      };
+
+      return (
+        <div className="fade-in max-w-6xl mx-auto px-4 py-8 md:py-12">
+          <h1 className="font-serif-kr text-2xl md:text-3xl font-bold text-brand-text mb-2">이미지 관리</h1>
+          <p className="text-brand-text/60 text-sm mb-8">ImageKit CDN으로 이미지를 관리합니다</p>
+
+          {/* Upload */}
+          <div className="bg-white rounded-lg p-6 mb-8">
+            <h2 className="font-serif-kr text-lg font-bold text-brand-text mb-4">이미지 업로드</h2>
+            <label className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-md text-sm font-medium cursor-pointer transition-all ${uploading ? 'bg-brand-light/50 text-brand-text/50' : 'bg-brand-primary text-white hover:bg-brand-primary/90'}`}>
+              {uploading ? '업로드 중...' : '파일 선택'}
+              <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} className="hidden" />
+            </label>
+            {msg && <p className="mt-3 text-sm text-brand-accent break-all">{msg}</p>}
+          </div>
+
+          {/* Image Gallery */}
+          <div className="bg-white rounded-lg p-6">
+            <h2 className="font-serif-kr text-lg font-bold text-brand-text mb-4">업로드된 이미지 ({images.length})</h2>
+            {loading ? (
+              <p className="text-brand-text/50 text-sm">불러오는 중...</p>
+            ) : images.length === 0 ? (
+              <p className="text-brand-text/50 text-sm">업로드된 이미지가 없습니다.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {images.map(img => (
+                  <div key={img.fileId} className="group relative">
+                    <div className="aspect-square rounded-lg overflow-hidden bg-brand-cream">
+                      <img src={img.url} alt={img.name} className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                    <p className="mt-1 text-xs text-brand-text/50 truncate">{img.name}</p>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(img.url); setMsg(`URL 복사됨: ${img.name}`); }}
+                      className="absolute top-2 right-2 bg-white/90 text-brand-text text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      URL 복사
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ========================================
+    // 8. App Component
+    // ========================================
+    function App() {
+      const { path } = useRouter();
+
+      let page;
+      let params;
+
+      if (path === '/' || path === '') {
+        page = <HomePage />;
+      } else if (path === '/shop') {
+        page = <ShopPage />;
+      } else if ((params = matchRoute('/product/:id', path))) {
+        page = <ProductDetailPage id={params.id} />;
+      } else if (path === '/cart') {
+        page = <CartPage />;
+      } else if (path === '/checkout') {
+        page = <CheckoutPage />;
+      } else if (path.startsWith('/payment-success')) {
+        page = <PaymentSuccessPage />;
+      } else if (path.startsWith('/payment-fail')) {
+        page = <PaymentFailPage />;
+      } else if ((params = matchRoute('/order-complete/:id', path))) {
+        page = <OrderCompletePage orderId={params.id} />;
+      } else if (path === '/orders') {
+        page = <OrdersPage />;
+      } else if (path === '/admin/images') {
+        page = <ImageManagePage />;
+      } else if (path === '/login') {
+        page = <LoginPage />;
+      } else if (path === '/signup') {
+        page = <SignupPage />;
+      } else {
+        page = (
+          <div className="max-w-6xl mx-auto px-4 py-20 text-center">
+            <h1 className="font-serif-kr text-2xl font-bold text-brand-text">페이지를 찾을 수 없습니다</h1>
+            <Link to="/"><Button variant="secondary" className="mt-4">홈으로 돌아가기</Button></Link>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          <main className="flex-1">{page}</main>
+          <Footer />
+        </div>
+      );
+    }
+
+    // ========================================
+    // 9. Rendering
+    // ========================================
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <Router>
+        <AuthProvider>
+          <CartProvider>
+            <App />
+          </CartProvider>
+        </AuthProvider>
+      </Router>
+    );
+  </script>
+</body>
+</html>
